@@ -1,0 +1,182 @@
+
+:root {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --green-forest: #008B40;
+  --green-emerald: #08B76B;
+  --green-jade: #36CDA8;
+  --green-mint: #43EDB5;
+  --green-aqua: #79F3E9;
+
+  --bg-primary: #F0FFF9;
+  --bg-surface: #F8FFFC;
+  --bg-elevated: #FFFFFF;
+  --bg-soft: #DDFBF0;
+  --bg-hover: #E6FFF5;
+
+  --text-primary: #123C2C;
+  --text-secondary: #416B58;
+  --text-muted: #648775;
+
+  --border: #CDEEDF;
+  --border-strong: #A5DFC4;
+
+  --accent: var(--green-forest);
+  --accent-hover: #006F36;
+  --accent-soft: #DDFBF0;
+  --accent-contrast: #FFFFFF;
+
+  --shadow-card: 0 5px 22px rgba(0, 107, 67, 0.055);
+  --shadow-hover: 0 12px 30px rgba(0, 107, 67, 0.11);
+  --shadow-modal: 0 24px 80px rgba(0, 61, 37, 0.22);
+
+  color-scheme: light;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+:root[data-theme="dark"] {
+  --green-forest: #003D25;
+  --green-emerald: #006B43;
+  --green-jade: #008C70;
+  --green-mint: #12AD83;
+  --green-aqua: #3AD6C0;
+
+  --bg-primary: #002B1C;
+  --bg-surface: #06402D;
+  --bg-elevated: #084B35;
+  --bg-soft: #0B563D;
+  --bg-hover: #105E43;
+
+  --text-primary: #E4FFF3;
+  --text-secondary: #B2E8D0;
+  --text-muted: #8BC9AD;
+
+  --border: #175C42;
+  --border-strong: #267B58;
+
+  --accent: #12AD83;
+  --accent-hover: #36CDA8;
+  --accent-soft: #0B563D;
+  --accent-contrast: #002B1C;
+
+  --shadow-card: 0 5px 22px rgba(0, 0, 0, 0.12);
+  --shadow-hover: 0 12px 30px rgba(0, 0, 0, 0.2);
+  --shadow-modal: 0 24px 80px rgba(0, 0, 0, 0.42);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  scroll-behavior: smooth;
+  scroll-padding-top: 100px;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  transition:
+    background-color 220ms ease,
+    color 220ms ease;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font-size: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--green-jade);
+  outline-offset: 3px;
+}
+
+a {
+  color: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+::selection {
+  color: var(--text-primary);
+  background: var(--green-jade);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+input,
+textarea,
+select {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.9;
+}
+
+option {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
