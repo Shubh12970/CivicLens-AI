@@ -28,6 +28,7 @@ type Issue = {
   severity: Severity
   department: string
   time: string
+  evidence?: File[]
 }
 
 const categories: Array<Category | 'All issues'> = [
@@ -298,6 +299,8 @@ function App() {
   const [reportLocality, setReportLocality] = useState('')
   const [formError, setFormError] = useState('')
   const [reportNotice, setReportNotice] = useState('')
+  const [reportFiles, setReportFiles] = useState<File[]>([])
+  const [fileError, setFileError] = useState('')  
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -362,6 +365,36 @@ function App() {
     )
   }
 
+  function addReportFiles(fileList: FileList | null) {
+  if (!fileList) return
+
+  const incomingFiles = Array.from(fileList)
+
+  if (reportFiles.length + incomingFiles.length > 5) {
+    setFileError('You can attach a maximum of 5 files.')
+    return
+  }
+
+  const oversizedFile = incomingFiles.find(
+    (file) => file.size > 10 * 1024 * 1024,
+  )
+
+  if (oversizedFile) {
+    setFileError('Each file must be 10 MB or smaller.')
+    return
+  }
+
+  setReportFiles((current) => [...current, ...incomingFiles])
+  setFileError('')
+}
+
+function removeReportFile(indexToRemove: number) {
+  setReportFiles((current) =>
+    current.filter((_, index) => index !== indexToRemove),
+  )
+  setFileError('')
+}
+
   function submitReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -397,6 +430,7 @@ function App() {
       severity: 'Medium',
       department: 'Pending review',
       time: 'Just now',
+      evidence: reportFiles,
     }
 
     setIssues((current) => [newIssue, ...current])
@@ -407,6 +441,8 @@ function App() {
     setReportTitle('')
     setReportDescription('')
     setReportLocality('')
+    setReportFiles([])
+    setFileError('')
     setFormError('')
     setShowReportForm(false)
     setReportNotice(
@@ -939,6 +975,119 @@ function App() {
                   />
                 </label>
               </div>
+                    
+<div className="evidence-upload">
+  <div className="evidence-heading">
+    <div>
+      <h3>Attach evidence</h3>
+      <p>
+        Add photos, videos, or documents to help people understand the issue.
+      </p>
+    </div>
+    <span className="evidence-count">{reportFiles.length}/5</span>
+  </div>
+
+  <div className="evidence-options">
+    <label className="evidence-option">
+      <Icon name="pin" size={19} />
+      <span>Camera</span>
+      <input
+        className="evidence-input"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        aria-label="Take a photo using the camera"
+        onChange={(event) => {
+          addReportFiles(event.target.files)
+          event.target.value = ''
+        }}
+      />
+    </label>
+
+    <label className="evidence-option">
+      <Icon name="plus" size={19} />
+      <span>Photos</span>
+      <input
+        className="evidence-input"
+        type="file"
+        accept="image/*"
+        multiple
+        aria-label="Choose photos"
+        onChange={(event) => {
+          addReportFiles(event.target.files)
+          event.target.value = ''
+        }}
+      />
+    </label>
+
+    <label className="evidence-option">
+      <Icon name="plus" size={19} />
+      <span>Videos</span>
+      <input
+        className="evidence-input"
+        type="file"
+        accept="video/*"
+        multiple
+        aria-label="Choose videos"
+        onChange={(event) => {
+          addReportFiles(event.target.files)
+          event.target.value = ''
+        }}
+      />
+    </label>
+
+    <label className="evidence-option">
+      <Icon name="plus" size={19} />
+      <span>Files</span>
+      <input
+        className="evidence-input"
+        type="file"
+        accept=".pdf,.doc,.docx,.txt,.csv,.xlsx"
+        multiple
+        aria-label="Choose documents"
+        onChange={(event) => {
+          addReportFiles(event.target.files)
+          event.target.value = ''
+        }}
+      />
+    </label>
+  </div>
+
+  <p className="evidence-help">
+    Up to 5 files, 10 MB each. Please avoid sharing private or sensitive
+    information.
+  </p>
+
+  {fileError && (
+    <p className="form-error" role="alert">
+      {fileError}
+    </p>
+  )}
+
+  {reportFiles.length > 0 && (
+    <ul className="evidence-list">
+      {reportFiles.map((file, index) => (
+        <li
+          className="evidence-file"
+          key={`${file.name}-${file.size}-${index}`}
+        >
+          <div className="evidence-file-info">
+            <strong>{file.name}</strong>
+            <span>{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+          </div>
+          <button
+            type="button"
+            className="evidence-remove"
+            aria-label={`Remove ${file.name}`}
+            onClick={() => removeReportFile(index)}
+          >
+            Remove
+          </button>
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
 
               {formError && <p className="form-error" role="alert">{formError}</p>}
 
