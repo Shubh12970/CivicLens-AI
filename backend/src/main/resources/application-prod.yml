@@ -1,0 +1,15 @@
+# Production profile: JSON logs, no Swagger UI, stricter defaults. Activate with SPRING_PROFILES_ACTIVE=prod
+logging:
+  structured:
+    format:
+      console: logstash
+
+springdoc:
+  api-docs:
+    enabled: ${OPENAPI_ENABLED:false}
+  swagger-ui:
+    enabled: ${OPENAPI_ENABLED:false}
+
+civiclens:
+  demo:
+    seed-enabled: false
