@@ -19,7 +19,13 @@ class GeminiResponseParserTest {
 
     static final String GOOD = "{\"category\":\"ROAD_DAMAGE\",\"severity\":\"HIGH\",\"confidence\":0.9,"
             + "\"safetyCritical\":false,\"explanation\":\"Road defect\",\"safetyConcerns\":[\"swerving\"],"
-            + "\"recommendedDepartmentId\":null,\"missingInformation\":[],\"recommendedNextAction\":\"Verify\"}";
+            + "\"recommendedDepartmentId\":null,\"missingInformation\":[\"exact landmark\"],\"recommendedNextAction\":\"Verify\","
+            + "\"impactSummary\":\"The defect may affect vehicles using this road.\","
+            + "\"riskRationale\":\"The report mentions swerving but no injury.\","
+            + "\"recommendedActions\":[\"Verify the site\",\"Check traffic exposure\"],"
+            + "\"clarifyingQuestions\":[\"Which lane is affected?\"],"
+            + "\"citizenGuidance\":\"Keep clear of the damaged area.\","
+            + "\"evidenceSuggestions\":[\"A photo from a safe public location\"]}";
 
     @Test
     void parsesStructuredAnswer() throws Exception {
@@ -28,6 +34,12 @@ class GeminiResponseParserTest {
         assertThat(raw.confidence()).isEqualTo(0.9);
         assertThat(raw.safetyConcerns()).containsExactly("swerving");
         assertThat(raw.recommendedDepartmentId()).isNull();
+        assertThat(raw.impactSummary()).contains("vehicles");
+        assertThat(raw.recommendedActions()).containsExactly("Verify the site", "Check traffic exposure");
+        assertThat(raw.citizenGuidance()).contains("Keep clear");
+        assertThat(raw.impactSummary()).contains("vehicles");
+        assertThat(raw.recommendedActions()).containsExactly("Verify the site", "Check traffic exposure");
+        assertThat(raw.citizenGuidance()).contains("Keep clear");
     }
 
     @Test

@@ -1,13 +1,22 @@
 package com.civiclens.city;
 
+import com.civiclens.common.ApiException;
 import com.civiclens.incident.IncidentCategory;
 import com.civiclens.review.ReviewService;
 import com.civiclens.reward.RewardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,20 +33,32 @@ public class CityController {
     public static final String INTEGRATION_STATUS = "INTERNAL_TRIAGE_QUEUE";
 
     private final CityDirectory directory;
+    private final CityProvisioningService provisioning;
     private final ReviewService reviews;
     private final RewardService rewards;
     private final JdbcTemplate jdbc;
 
-    public CityController(CityDirectory directory, ReviewService reviews, RewardService rewards, JdbcTemplate jdbc) {
+    public CityController(CityDirectory directory, CityProvisioningService provisioning, ReviewService reviews, RewardService rewards, JdbcTemplate jdbc) {
         this.directory = directory;
+        this.provisioning = provisioning;
         this.reviews = reviews;
         this.rewards = rewards;
         this.jdbc = jdbc;
     }
 
-    public record CityView(UUID id, String code, String name, String state, String country, Double centerLatitude,
-                           Double centerLongitude, int departmentCount, List<IncidentCategory> unmappedCategories) {
-    }
+    public record CityView(UUID id, String code, String name, String state, String country, String countryCode,
+                           Double centerLatitude, Double centerLongitude, int departmentCount,
+                           List<IncidentCategory> unmappedCategories) { }
+
+    /** Location details supplied by a selected geocoder result, not arbitrary free-text city guesses. */
+    public record ResolveLocationRequest(
+            @NotBlank @Size(max = 120) String cityName,
+            @Size(max = 120) String state,
+            @NotBlank @Size(max = 80) String country,
+            @NotBlank @Pattern(regexp = "(?i)^[a-z]{2}$", message = "countryCode must be a two-letter ISO code.")
+            String countryCode,
+            @DecimalMin("-90.0") @DecimalMax("90.0") Double centerLatitude,
+            @DecimalMin("-180.0") @DecimalMax("180.0") Double centerLongitude) { }
 
     public record DepartmentView(UUID id, UUID cityId, String code, String name, String description,
                                  List<IncidentCategory> categories, String integrationStatus) {
@@ -53,6 +74,17 @@ public class CityController {
     @Transactional(readOnly = true)
     public List<CityView> cities() {
         return directory.activeCities().stream().map(this::toView).toList();
+    }
+
+    @Operation(summary = "Resolve or create a global settlement and its default internal triage queues")
+    @PostMapping("/api/v1/cities/resolve")
+    public CityView resolveLocation(@Valid @RequestBody ResolveLocationRequest request) {
+        if ((request.centerLatitude() == null) != (request.centerLongitude() == null)) {
+            throw ApiException.validation("centerLatitude", "centerLatitude and centerLongitude must be provided together.");
+        }
+        City city = provisioning.resolve(request.cityName(), request.state(), request.country(), request.countryCode(),
+                request.centerLatitude(), request.centerLongitude());
+        return toView(city);
     }
 
     @GetMapping("/api/v1/cities/{cityId}")
@@ -95,7 +127,7 @@ public class CityController {
         var routing = directory.routingTable(c.getId());
         List<IncidentCategory> unmapped = Arrays.stream(IncidentCategory.values())
                 .filter(cat -> !routing.containsKey(cat)).toList();
-        return new CityView(c.getId(), c.getCode(), c.getName(), c.getState(), c.getCountry(), c.getCenterLatitude(),
+        return new CityView(c.getId(), c.getCode(), c.getName(), c.getState(), c.getCountry(), c.getCountryCode(), c.getCenterLatitude(),
                 c.getCenterLongitude(), directory.departmentsOf(c.getId()).size(), unmapped);
     }
 }

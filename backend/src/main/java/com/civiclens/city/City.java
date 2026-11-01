@@ -20,6 +20,10 @@ public class City {
     private String state;
     @Column(nullable = false)
     private String country;
+    @Column(name = "country_code", nullable = false, length = 2)
+    private String countryCode;
+    @Column(name = "location_key", nullable = false, unique = true, length = 300)
+    private String locationKey;
     @Column(name = "center_latitude")
     private Double centerLatitude;
     @Column(name = "center_longitude")
@@ -35,6 +39,8 @@ public class City {
     public String getName() { return name; }
     public String getState() { return state; }
     public String getCountry() { return country; }
+    public String getCountryCode() { return countryCode; }
+    public String getLocationKey() { return locationKey; }
     public Double getCenterLatitude() { return centerLatitude; }
     public Double getCenterLongitude() { return centerLongitude; }
     public boolean isActive() { return active; }

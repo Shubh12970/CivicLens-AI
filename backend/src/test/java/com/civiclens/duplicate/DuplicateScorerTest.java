@@ -111,43 +111,28 @@ class DuplicateScorerTest {
     }
 
     @Test
-void textNormalizationAndSimilarity() {
-    assertThat(TextSimilarity.normalize("The STREET-lights aren't working!!"))
-            .isEqualTo("street light not work");
+    void textNormalizationAndSimilarity() {
+        assertThat(TextSimilarity.normalize("The STREET-lights aren't working!!")).isEqualTo("street light not work");
+        assertThat(TextSimilarity.similarity("a b c", "a b c")).isEqualTo(1.0);
+        assertThat(TextSimilarity.similarity("", "anything")).isEqualTo(0.0);
+        assertThat(TextSimilarity.similarity(TextSimilarity.normalize("garbage pile not collected"),
+                TextSimilarity.normalize("streetlight broken pole"))).isLessThan(0.2);
+    }
 
-    assertThat(TextSimilarity.similarity("a b c", "a b c")).isEqualTo(1.0);
-    assertThat(TextSimilarity.similarity("", "anything")).isEqualTo(0.0);
+    @Test
+    void negationIsPreservedDuringNormalizationAndSimilarity() {
+        String working = TextSimilarity.normalize("Streetlight is working");
+        String notWorking = TextSimilarity.normalize("Streetlight is not working");
+        String contractedNotWorking = TextSimilarity.normalize("Streetlight isn't working");
 
-    assertThat(TextSimilarity.similarity(
-            TextSimilarity.normalize("garbage pile not collected"),
-            TextSimilarity.normalize("streetlight broken pole")))
-            .isLessThan(0.2);
-}
+        assertThat(working).isNotEqualTo(notWorking);
+        assertThat(notWorking).isEqualTo(contractedNotWorking);
+        assertThat(notWorking).isEqualTo("streetlight not work");
+        assertThat(TextSimilarity.similarity(working, notWorking)).isLessThan(1.0);
+        assertThat(TextSimilarity.normalize("No streetlight is working"))
+                .isEqualTo("no streetlight work");
+    }
 
-@Test
-void negationIsPreservedDuringNormalizationAndSimilarity() {
-
-    String working = TextSimilarity.normalize("Streetlight is working");
-    String notWorking = TextSimilarity.normalize("Streetlight is not working");
-    String contractedNotWorking = TextSimilarity.normalize("Streetlight isn't working");
-
-    // Positive and negative descriptions must remain different.
-    assertThat(working).isNotEqualTo(notWorking);
-
-    // Both forms of the negative description should normalize identically.
-    assertThat(notWorking).isEqualTo(contractedNotWorking);
-
-    // Negation must not be discarded as a stopword.
-    assertThat(notWorking).isEqualTo("streetlight not work");
-
-    // Negative and positive descriptions must not have perfect similarity.
-    assertThat(TextSimilarity.similarity(working, notWorking))
-            .isLessThan(1.0);
-
-    // The word "no" must also be preserved.
-    assertThat(TextSimilarity.normalize("No streetlight is working"))
-            .isEqualTo("no streetlight work");
-}
     @Test
     void haversineDistance() {
         // ~111 km per degree of latitude
