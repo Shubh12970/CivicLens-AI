@@ -97,6 +97,38 @@ class AnalysisValidatorTest {
     }
 
     @Test
+    void acceptsExpandedDecisionSupportAndKeepsItBounded() throws Exception {
+        var v = AnalysisValidator.validate(raw("ROAD_DAMAGE", "HIGH", 0.82, false,
+                "Vehicles are swerving around a reported pothole.", null, "Verify the location."), Set.of());
+        assertThat(v.impactSummary()).contains("public-infrastructure");
+        assertThat(v.riskRationale()).contains("official");
+        assertThat(v.recommendedActions()).isNotEmpty();
+        assertThat(v.citizenGuidance()).contains("safe distance");
+    }
+
+    @Test
+    void rejectsActionClaimsInCitizenGuidance() {
+        RawAnalysis value = new RawAnalysis("GARBAGE", "MEDIUM", 0.7, false, "Waste has accumulated.",
+                List.of(), null, List.of(), "Verify location.",
+                "The waste may affect sanitation.", "No immediate danger was described.",
+                List.of("Verify the site"), List.of(), "A team has been dispatched.", List.of());
+        assertThatThrownBy(() -> AnalysisValidator.validate(value, Set.of()))
+                .hasMessageContaining("citizenGuidance claims an action was taken");
+    }
+
+    @Test
+    void removesActionClaimsFromRecommendedActionList() throws Exception {
+        RawAnalysis value = new RawAnalysis("GARBAGE", "MEDIUM", 0.7, false, "Waste has accumulated.",
+                List.of(), null, List.of(), "Verify location.",
+                "The waste may affect sanitation.", "No immediate danger was described.",
+                List.of("A team is on the way", "An official should verify the site"), List.of(),
+                "Keep away from waste and report immediate hazards to local services.", List.of());
+        var result = AnalysisValidator.validate(value, Set.of());
+        assertThat(result.recommendedActions()).containsExactly("An official should verify the site");
+        assertThat(result.warnings()).anyMatch(w -> w.contains("recommendedActions"));
+    }
+
+    @Test
     void listsAreTrimmedAndCapped() throws Exception {
         var r = new RawAnalysis("GARBAGE", "LOW", 0.5, false, "x", List.of("a", " ", "b", "c", "d", "e", "f", "y".repeat(300)),
                 null, null, null);

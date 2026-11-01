@@ -30,6 +30,8 @@ public class IncidentAnalysis {
     private AnalysisSource source;
     private String provider;
     private String model;
+    @Column(name = "thinking_level", length = 10)
+    private String thinkingLevel;
     @Column(name = "prompt_version", nullable = false)
     private String promptVersion;
     @Column(name = "attempt_count", nullable = false)
@@ -54,6 +56,18 @@ public class IncidentAnalysis {
     private String missingInformation;
     @Column(name = "recommended_next_action")
     private String recommendedNextAction;
+    @Column(name = "impact_summary", length = 700)
+    private String impactSummary;
+    @Column(name = "risk_rationale", length = 700)
+    private String riskRationale;
+    @Column(name = "recommended_actions")
+    private String recommendedActions;
+    @Column(name = "clarifying_questions")
+    private String clarifyingQuestions;
+    @Column(name = "citizen_guidance", length = 600)
+    private String citizenGuidance;
+    @Column(name = "evidence_suggestions")
+    private String evidenceSuggestions;
     @Column(name = "recommended_department_id")
     private UUID recommendedDepartmentId;
     @Column(name = "validation_warnings")
@@ -86,14 +100,17 @@ public class IncidentAnalysis {
         this.updatedAt = now;
     }
 
-    public void complete(AnalysisSource source, String provider, String model, IncidentCategory category,
-                         Severity severity, Double confidence, boolean safetyCritical, String explanation,
+    public void complete(AnalysisSource source, String provider, String model, String thinkingLevel,
+                         IncidentCategory category, Severity severity, Double confidence, boolean safetyCritical, String explanation,
                          String safetyConcernsJson, String missingInfoJson, String nextAction, UUID department,
-                         String warningsJson, Instant now) {
+                         String warningsJson, String impactSummary, String riskRationale,
+                         String recommendedActionsJson, String clarifyingQuestionsJson,
+                         String citizenGuidance, String evidenceSuggestionsJson, Instant now) {
         this.status = AnalysisStatus.COMPLETED;
         this.source = source;
         this.provider = provider;
         this.model = model;
+        this.thinkingLevel = thinkingLevel;
         this.category = category;
         this.severity = severity;
         this.confidence = confidence;
@@ -104,6 +121,12 @@ public class IncidentAnalysis {
         this.recommendedNextAction = nextAction;
         this.recommendedDepartmentId = department;
         this.validationWarnings = warningsJson;
+        this.impactSummary = impactSummary;
+        this.riskRationale = riskRationale;
+        this.recommendedActions = recommendedActionsJson;
+        this.clarifyingQuestions = clarifyingQuestionsJson;
+        this.citizenGuidance = citizenGuidance;
+        this.evidenceSuggestions = evidenceSuggestionsJson;
         this.leaseUntil = null;
         this.nextAttemptAt = null;
         this.completedAt = now;
@@ -147,6 +170,7 @@ public class IncidentAnalysis {
     public AnalysisSource getSource() { return source; }
     public String getProvider() { return provider; }
     public String getModel() { return model; }
+    public String getThinkingLevel() { return thinkingLevel; }
     public String getPromptVersion() { return promptVersion; }
     public int getAttemptCount() { return attemptCount; }
     public int getMaxAttempts() { return maxAttempts; }
@@ -160,6 +184,12 @@ public class IncidentAnalysis {
     public String getSafetyConcerns() { return safetyConcerns; }
     public String getMissingInformation() { return missingInformation; }
     public String getRecommendedNextAction() { return recommendedNextAction; }
+    public String getImpactSummary() { return impactSummary; }
+    public String getRiskRationale() { return riskRationale; }
+    public String getRecommendedActions() { return recommendedActions; }
+    public String getClarifyingQuestions() { return clarifyingQuestions; }
+    public String getCitizenGuidance() { return citizenGuidance; }
+    public String getEvidenceSuggestions() { return evidenceSuggestions; }
     public UUID getRecommendedDepartmentId() { return recommendedDepartmentId; }
     public String getValidationWarnings() { return validationWarnings; }
     public String getLastErrorCode() { return lastErrorCode; }

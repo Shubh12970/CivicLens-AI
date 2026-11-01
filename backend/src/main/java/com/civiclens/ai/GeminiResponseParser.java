@@ -79,7 +79,13 @@ public final class GeminiResponseParser {
                 strings(node, "safetyConcerns"),
                 text(node, "recommendedDepartmentId"),
                 strings(node, "missingInformation"),
-                text(node, "recommendedNextAction"));
+                text(node, "recommendedNextAction"),
+                text(node, "impactSummary"),
+                text(node, "riskRationale"),
+                strings(node, "recommendedActions"),
+                strings(node, "clarifyingQuestions"),
+                text(node, "citizenGuidance"),
+                strings(node, "evidenceSuggestions"));
     }
 
     private static String stripCodeFence(String s) {

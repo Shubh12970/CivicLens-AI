@@ -20,8 +20,8 @@ import java.time.Duration;
 import java.util.Locale;
 
 /**
- * Gemini REST client for {@code models/{model}:generateContent} with JSON structured output
- * ({@code generationConfig.responseMimeType = application/json} + {@code responseSchema}).
+ * Gemini REST client for {@code models/{model}:generateContent} with structured JSON output
+ * and configurable Gemini 3 thinking depth.
  * The API key is sent in the {@code x-goog-api-key} header, never in the URL, and is never logged.
  * One call per attempt: retries and back-off are handled by {@link AnalysisService} so they are persistent and bounded.
  */
@@ -117,8 +117,13 @@ public class GeminiIntelligenceProvider implements IntelligenceProvider {
         content.put("role", "user");
         content.putArray("parts").addObject().put("text", AnalysisPrompt.userPrompt(input));
         ObjectNode generation = body.putObject("generationConfig");
-        generation.put("responseMimeType", "application/json");
-        generation.set("responseSchema", AnalysisPrompt.responseSchema(mapper));
+        // Gemini 3.8 Flash supports explicit reasoning depth. Private thoughts are not requested,
+        // logged, stored, or exposed; only the validated structured result is returned to CivicLens.
+        generation.putObject("thinkingConfig").put("thinkingLevel", config.thinkingLevel());
+        generation.put("maxOutputTokens", config.maxOutputTokens());
+        ObjectNode textFormat = generation.putObject("responseFormat").putObject("text");
+        textFormat.put("mimeType", "APPLICATION_JSON");
+        textFormat.set("schema", AnalysisPrompt.responseSchema(mapper));
         try {
             return mapper.writeValueAsString(body);
         } catch (JsonProcessingException e) {

@@ -48,7 +48,22 @@ public record AppProperties(
         }
     }
 
-    public record Gemini(String apiKey, String model, String baseUrl, Duration connectTimeout, Duration requestTimeout) {
+    public record Gemini(String apiKey, String model, String baseUrl, Duration connectTimeout, Duration requestTimeout,
+                         String thinkingLevel, int maxOutputTokens) {
+
+        public Gemini(String apiKey, String model, String baseUrl, Duration connectTimeout, Duration requestTimeout) {
+            this(apiKey, model, baseUrl, connectTimeout, requestTimeout, "HIGH", 8192);
+        }
+
+        public Gemini {
+            thinkingLevel = thinkingLevel == null || thinkingLevel.isBlank() ? "HIGH" : thinkingLevel.strip().toUpperCase(java.util.Locale.ROOT);
+            if (!List.of("LOW", "MEDIUM", "HIGH").contains(thinkingLevel)) {
+                throw new IllegalArgumentException("civiclens.ai.gemini.thinking-level must be LOW, MEDIUM or HIGH");
+            }
+            if (maxOutputTokens < 1024 || maxOutputTokens > 32768) {
+                maxOutputTokens = 8192;
+            }
+        }
 
         public boolean configured() {
             return apiKey != null && !apiKey.isBlank();

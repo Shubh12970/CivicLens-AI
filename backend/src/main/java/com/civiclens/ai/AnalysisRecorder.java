@@ -95,7 +95,10 @@ public class AnalysisRecorder {
     }
 
     public AnalysisInput inputFor(Incident incident) {
-        String cityName = cityDirectory.findCity(incident.getCityId()).map(City::getName).orElse(null);
+        String cityName = cityDirectory.findCity(incident.getCityId())
+                .map(city -> String.join(", ", java.util.stream.Stream.of(city.getName(), city.getState(), city.getCountry())
+                        .filter(value -> value != null && !value.isBlank()).toList()))
+                .orElse(null);
         Map<UUID, List<IncidentCategory>> handled = cityDirectory.categoriesByDepartment(incident.getCityId());
         List<DepartmentOption> departments = cityDirectory.departmentsOf(incident.getCityId()).stream()
                 .map(d -> new DepartmentOption(d.getId(), d.getName(), handled.getOrDefault(d.getId(), List.of())))
@@ -115,10 +118,13 @@ public class AnalysisRecorder {
             return;
         }
         Instant now = clock.instant();
-        analysis.complete(source, provider, model, result.category(), result.severity(), result.confidence(),
+        String thinkingLevel = source == AnalysisSource.GEMINI ? config.gemini().thinkingLevel() : null;
+        analysis.complete(source, provider, model, thinkingLevel, result.category(), result.severity(), result.confidence(),
                 result.safetyCritical(), result.explanation(), json(result.safetyConcerns()),
                 json(result.missingInformation()), result.recommendedNextAction(), result.recommendedDepartmentId(),
-                json(result.warnings()), now);
+                json(result.warnings()), result.impactSummary(), result.riskRationale(),
+                json(result.recommendedActions()), json(result.clarifyingQuestions()), result.citizenGuidance(),
+                json(result.evidenceSuggestions()), now);
         if (fallbackReason != null) {
             analysis.recordError(fallbackReason, "Gemini analysis unavailable; rule-based fallback used");
         }

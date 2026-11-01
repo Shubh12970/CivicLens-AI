@@ -12,7 +12,7 @@ public final class AnalysisModels {
     private AnalysisModels() {
     }
 
-    /** What the agent is allowed to see: report text and city routing context, no personal data about the reporter. */
+    /** What the agent may see: report and location/routing context, never reporter account or contact data. */
     public record AnalysisInput(
             String title,
             String description,
@@ -27,7 +27,7 @@ public final class AnalysisModels {
     public record DepartmentOption(UUID id, String name, List<IncidentCategory> categories) {
     }
 
-    /** Untrusted, unvalidated fields exactly as returned by a provider. */
+    /** Untrusted, unvalidated fields returned by the provider. */
     public record RawAnalysis(
             String category,
             String severity,
@@ -37,10 +37,30 @@ public final class AnalysisModels {
             List<String> safetyConcerns,
             String recommendedDepartmentId,
             List<String> missingInformation,
-            String recommendedNextAction) {
+            String recommendedNextAction,
+            String impactSummary,
+            String riskRationale,
+            List<String> recommendedActions,
+            List<String> clarifyingQuestions,
+            String citizenGuidance,
+            List<String> evidenceSuggestions) {
+
+        /** Backward-compatible constructor for existing test providers and fixtures. */
+        public RawAnalysis(String category, String severity, Double confidence, Boolean safetyCritical,
+                           String explanation, List<String> safetyConcerns, String recommendedDepartmentId,
+                           List<String> missingInformation, String recommendedNextAction) {
+            this(category, severity, confidence, safetyCritical, explanation, safetyConcerns,
+                    recommendedDepartmentId, missingInformation, recommendedNextAction,
+                    "The report describes a public-infrastructure concern. The number of affected people is unknown.",
+                    "This is a preliminary assessment based only on the submitted description; an official must verify the site.",
+                    List.of("An authorized official should verify the location and reported condition."),
+                    List.of(),
+                    "Keep a safe distance from any suspected hazard. Do not attempt repairs yourself.",
+                    List.of());
+        }
     }
 
-    /** Output that passed {@link AnalysisValidator}; every field is within the documented bounds. */
+    /** Only fields that passed {@link AnalysisValidator}. */
     public record ValidatedAnalysis(
             IncidentCategory category,
             Severity severity,
@@ -51,7 +71,26 @@ public final class AnalysisModels {
             UUID recommendedDepartmentId,
             List<String> missingInformation,
             String recommendedNextAction,
-            List<String> warnings) {
+            List<String> warnings,
+            String impactSummary,
+            String riskRationale,
+            List<String> recommendedActions,
+            List<String> clarifyingQuestions,
+            String citizenGuidance,
+            List<String> evidenceSuggestions) {
+
+        /** Backward-compatible constructor for older deterministic test fixtures. */
+        public ValidatedAnalysis(IncidentCategory category, Severity severity, Double confidence,
+                                 boolean safetyCritical, String explanation, List<String> safetyConcerns,
+                                 UUID recommendedDepartmentId, List<String> missingInformation,
+                                 String recommendedNextAction, List<String> warnings) {
+            this(category, severity, confidence, safetyCritical, explanation, safetyConcerns,
+                    recommendedDepartmentId, missingInformation, recommendedNextAction, warnings,
+                    "The report describes a public-infrastructure concern. The number of affected people is unknown.",
+                    "Preliminary assessment only. An authorized official must verify the reported conditions.",
+                    List.of("An authorized official should verify the report and location."), List.of(),
+                    "Keep a safe distance from suspected hazards. Do not attempt repairs yourself.", List.of());
+        }
     }
 
     public record ProviderResult(RawAnalysis raw, String provider, String model) {

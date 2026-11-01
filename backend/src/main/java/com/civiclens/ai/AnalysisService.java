@@ -94,11 +94,13 @@ public class AnalysisService {
     public AnalysisView toView(IncidentAnalysis a) {
         String deptName = cityDirectory.findDepartment(a.getRecommendedDepartmentId()).map(Department::getName).orElse(null);
         return new AnalysisView(a.getId(), a.getRunNumber(), a.getStatus(), a.getSource(),
-                a.getSource() == AnalysisSource.GEMINI, a.getProvider(), a.getModel(), a.getPromptVersion(),
+                a.getSource() == AnalysisSource.GEMINI, a.getProvider(), a.getModel(), a.getThinkingLevel(), a.getPromptVersion(),
                 a.getAttemptCount(), a.getMaxAttempts(), a.getNextAttemptAt(), a.getCategory(), a.getSeverity(),
                 a.getConfidence(), a.getSafetyCritical(), a.getExplanation(), readList(a.getSafetyConcerns()),
                 readList(a.getMissingInformation()), a.getRecommendedNextAction(), a.getRecommendedDepartmentId(),
                 deptName, readList(a.getValidationWarnings()), a.getLastErrorCode(), a.getLastErrorMessage(),
+                a.getImpactSummary(), a.getRiskRationale(), readList(a.getRecommendedActions()),
+                readList(a.getClarifyingQuestions()), a.getCitizenGuidance(), readList(a.getEvidenceSuggestions()),
                 a.getCreatedAt(), a.getCompletedAt(), AnalysisView.DISCLAIMER);
     }
 

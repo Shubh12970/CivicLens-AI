@@ -89,8 +89,20 @@ public final class RuleBasedTriage {
         }
         String explanation = "Rule-based fallback (not AI): category from keyword matching, severity is a conservative "
                 + "default (" + severity + ") that an official must verify. Reason for fallback: " + reason + ".";
+        String impact = "The reported infrastructure issue may disrupt normal use of the location. The report does not provide a verified count of affected people.";
+        String riskRationale = "Fallback assessment uses conservative keyword rules and the citizen hazard flag. An authorized official must verify the actual conditions.";
+        List<String> actions = List.of(
+                "An authorized official should review the report and verify the exact location.",
+                "Check whether the reported condition creates an immediate risk to people.",
+                "Confirm the appropriate internal department queue before assignment.");
+        List<String> questions = missing.isEmpty() ? List.of() : List.of("Can the reporter provide a nearby landmark or more precise location?");
+        String guidance = safety
+                ? "Keep a safe distance from the reported hazard. Do not touch or attempt to repair it; contact local emergency services if there is immediate danger."
+                : "Avoid interfering with the reported infrastructure. Add a nearby landmark or safe photograph if it is easy to provide.";
+        List<String> evidence = List.of("A photograph taken from a safe public location", "A nearby landmark or street name");
         return new ValidatedAnalysis(category, severity, null, safety, explanation, concerns.stream().limit(5).toList(),
-                null, missing, "Official review required: verify category, severity and location.", List.of());
+                null, missing, "Official review required: verify category, severity and location.", List.of(),
+                impact, riskRationale, actions, questions, guidance, evidence);
     }
 
     /** Small helper so the fallback reads the same text the duplicate detector sees. */

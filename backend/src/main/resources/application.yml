@@ -100,14 +100,20 @@ civiclens:
       model: ${GEMINI_MODEL:gemini-3.8-flash}
       base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
       connect-timeout: PT5S
-      request-timeout: ${GEMINI_TIMEOUT:PT20S}
+      request-timeout: ${GEMINI_TIMEOUT:PT90S}
+      thinking-level: ${GEMINI_THINKING_LEVEL:HIGH}
+      max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:8192}
     fallback-enabled: ${AI_FALLBACK_ENABLED:true}
     max-attempts: 3
     retry-backoff: PT20S
-    lease-duration: PT2M
+    lease-duration: PT3M
     processing-mode: async
     scheduler-enabled: true
     scheduler-interval: PT15S
+  geocoding:
+    enabled: ${GEOCODING_ENABLED:true}
+    base-url: ${GEOCODING_BASE_URL:https://nominatim.openstreetmap.org}
+    user-agent: ${GEOCODING_USER_AGENT:CivicLensAI/1.0 (+https://github.com/Shubh12970/CivicLens-AI)}
   duplicates:
     window-days: 90
     max-distance-meters: 300
