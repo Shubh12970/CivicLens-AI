@@ -1,0 +1,26 @@
+# Test profile. The datasource URL is injected by EmbeddedPostgresSupport (a real PostgreSQL 17 process).
+# The JWT secret is random per test run; no real secret is stored in the repository.
+civiclens:
+  security:
+    jwt-secret: test-${random.uuid}-${random.uuid}
+  rate-limit:
+    enabled: false
+  ai:
+    gemini:
+      api-key: ""
+    processing-mode: sync
+    scheduler-enabled: false
+    retry-backoff: PT0S
+  demo:
+    seed-enabled: false
+  bootstrap:
+    admin-email: ""
+    admin-password: ""
+
+logging:
+  level:
+    com.civiclens: WARN
+    org.springframework: WARN
+    org.hibernate: WARN
+    org.flywaydb: WARN
+    io.zonky: WARN
