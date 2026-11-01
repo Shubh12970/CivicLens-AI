@@ -1,4 +1,4 @@
-﻿package com.civiclens.config;
+package com.civiclens.config;
 
 import com.civiclens.ai.GeminiIntelligenceProvider;
 import com.civiclens.ai.IntelligenceProvider;
