@@ -1,1117 +1,435 @@
-
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import './App.css'
 
-type Category =
-  | 'Roads'
-  | 'Streetlights'
-  | 'Garbage'
-  | 'Drainage'
-  | 'Water'
-  | 'Public safety'
-  | 'Other'
-
-type IssueStatus = 'Reported' | 'Under review' | 'In progress' | 'Resolved'
-type Severity = 'Low' | 'Medium' | 'High' | 'Critical'
 type Theme = 'light' | 'dark'
-
+type View = 'community' | 'report' | 'issue' | 'admin' | 'leaderboard' | 'map'
+type Attachment = { id: string; file: File }
 type Issue = {
-  id: number
+  id: string
   title: string
   description: string
-  category: Category
-  location: string
+  category: string
   locality: string
+  createdAt: string
   votes: number
-  comments: number
-  status: IssueStatus
-  severity: Severity
-  department: string
-  time: string
-  evidence?: File[]
+  status: 'Reported' | 'In Progress' | 'Resolved'
+  attachments: Attachment[]
+  coordinates: { latitude: number; longitude: number } | null
 }
+type LocationSuggestion = { label: string; lat: string; lon: string }
 
-const categories: Array<Category | 'All issues'> = [
-  'All issues',
-  'Roads',
-  'Streetlights',
-  'Garbage',
-  'Drainage',
-  'Water',
-  'Public safety',
+const categories = [
+  'Roads & Potholes',
+  'Sanitation / Waste Management',
+  'Water Supply',
+  'Streetlights & Electricity',
+  'Drainage & Flooding',
+  'Public Safety',
+  'Parks & Public Spaces',
   'Other',
 ]
 
 const initialIssues: Issue[] = [
   {
-    id: 1,
-    title: 'Deep pothole near the main market crossing',
-    description:
-      'A large pothole has formed near the market crossing. Two-wheelers are swerving to avoid it, especially during evening traffic.',
-    category: 'Roads',
-    location: 'Market Crossing',
-    locality: 'Lamphel',
-    votes: 128,
-    comments: 24,
-    status: 'Under review',
-    severity: 'High',
-    department: 'Roads & Infrastructure',
-    time: '18 min ago',
+    id: 'CL-1024',
+    title: 'Large pothole near the main gate',
+    description: 'A deep pothole has formed near the main gate and is difficult to see after sunset.',
+    category: 'Roads & Potholes',
+    locality: 'Lamphel, Imphal, Manipur',
+    createdAt: 'Today',
+    votes: 24,
+    status: 'In Progress',
+    attachments: [],
+    coordinates: null,
   },
   {
-    id: 2,
-    title: 'Streetlights not working on the residential road',
-    description:
-      'Several streetlights have been out for the past few nights, leaving a long stretch of the road poorly lit after sunset.',
-    category: 'Streetlights',
-    location: 'Thangmeiband Road',
-    locality: 'Thangmeiband',
-    votes: 86,
-    comments: 12,
+    id: 'CL-1023',
+    title: 'Garbage collection needed near the market',
+    description: 'Waste has accumulated near the market entrance. Please arrange collection.',
+    category: 'Sanitation / Waste Management',
+    locality: 'Thangal Bazar, Imphal, Manipur',
+    createdAt: 'Yesterday',
+    votes: 18,
     status: 'Reported',
-    severity: 'Medium',
-    department: 'Electrical Services',
-    time: '42 min ago',
+    attachments: [],
+    coordinates: null,
   },
   {
-    id: 3,
-    title: 'Overflowing community waste collection point',
-    description:
-      'Waste has accumulated around the collection point. The area needs cleaning and a check on collection frequency.',
-    category: 'Garbage',
-    location: 'Community Park Entrance',
-    locality: 'Singjamei',
-    votes: 64,
-    comments: 18,
-    status: 'In progress',
-    severity: 'Medium',
-    department: 'Sanitation',
-    time: '1 hr ago',
-  },
-  {
-    id: 4,
-    title: 'Drain cover missing beside a busy footpath',
-    description:
-      'An open drain is exposed beside the footpath. People walking here have to step into the road to get around it.',
-    category: 'Drainage',
-    location: 'Keishamthong Junction',
-    locality: 'Keishamthong',
-    votes: 143,
-    comments: 31,
-    status: 'Under review',
-    severity: 'Critical',
-    department: 'Drainage & Public Works',
-    time: '2 hrs ago',
-  },
-  {
-    id: 5,
-    title: 'Low water pressure in nearby households',
-    description:
-      'Residents have reported unusually low water pressure this morning. The cause has not yet been confirmed.',
-    category: 'Water',
-    location: 'Lane 4, Central Colony',
-    locality: 'Wangkhei',
-    votes: 37,
-    comments: 9,
-    status: 'Reported',
-    severity: 'Low',
-    department: 'Water Supply',
-    time: '3 hrs ago',
+    id: 'CL-1022',
+    title: 'Streetlight not working',
+    description: 'The streetlight on the lane has not worked for several nights.',
+    category: 'Streetlights & Electricity',
+    locality: 'Porompat, Imphal, Manipur',
+    createdAt: '2 days ago',
+    votes: 12,
+    status: 'Resolved',
+    attachments: [],
+    coordinates: null,
   },
 ]
 
-type IconName =
-  | 'leaf'
-  | 'sun'
-  | 'moon'
-  | 'search'
-  | 'plus'
-  | 'thumb'
-  | 'message'
-  | 'pin'
-  | 'clock'
-  | 'filter'
-  | 'check'
-  | 'close'
-  | 'arrow'
-  | 'menu'
-  | 'shield'
-  | 'sparkle'
-
-function Icon({
-  name,
-  size = 18,
-  filled = false,
-}: {
-  name: IconName
-  size?: number
-  filled?: boolean
-}) {
-  const common = {
-    width: size,
-    height: size,
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.7,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    'aria-hidden': true as const,
-  }
-
+function Icon({ name, size = 20 }: { name: string; size?: number }) {
+  const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true as const }
   switch (name) {
-    case 'leaf':
-      return (
-        <svg {...common}>
-          <path d="M20 4C11 4 5 7 5 14a6 6 0 0 0 6 6c7 0 9-8 9-16Z" />
-          <path d="M4 21c3-6 7-9 12-12" />
-        </svg>
-      )
     case 'sun':
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
-        </svg>
-      )
+      return <svg {...common}><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></svg>
     case 'moon':
-      return (
-        <svg {...common}>
-          <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />
-          <path d="M16 3v4m-2-2h4" />
-        </svg>
-      )
-    case 'search':
-      return (
-        <svg {...common}>
-          <circle cx="10.8" cy="10.8" r="6.8" />
-          <path d="m16 16 4.5 4.5" />
-        </svg>
-      )
-    case 'plus':
-      return (
-        <svg {...common}>
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      )
+      return <svg {...common}><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.6 8.6 0 1 0 20.5 14.2Z" /></svg>
     case 'thumb':
-      return (
-        <svg {...common} fill={filled ? 'currentColor' : 'none'}>
-          <path d="M7 10v11H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3Z" />
-          <path d="M7 10 12 3a2.5 2.5 0 0 1 2 3v4h4.5a2.5 2.5 0 0 1 2.4 3.2l-2 7A2.5 2.5 0 0 1 16.5 22H7" />
-        </svg>
-      )
-    case 'message':
-      return (
-        <svg {...common}>
-          <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z" />
-        </svg>
-      )
+      return <svg {...common}><path d="M7 10v11H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3Zm0 0 5-8c1.4 0 2.2 1.2 1.8 2.6L13 9h5.5a2.5 2.5 0 0 1 2.4 3.2l-1.7 6.2a3.5 3.5 0 0 1-3.4 2.6H7" /></svg>
     case 'pin':
-      return (
-        <svg {...common}>
-          <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
-          <circle cx="12" cy="10" r="2.5" />
-        </svg>
-      )
-    case 'clock':
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 7v5l3 2" />
-        </svg>
-      )
-    case 'filter':
-      return (
-        <svg {...common}>
-          <path d="M4 7h16M7 12h10m-7 5h4" />
-          <circle cx="8" cy="7" r="1.5" />
-          <circle cx="15" cy="12" r="1.5" />
-        </svg>
-      )
-    case 'check':
-      return (
-        <svg {...common}>
-          <path d="m5 12 4 4L19 6" />
-        </svg>
-      )
-    case 'close':
-      return (
-        <svg {...common}>
-          <path d="m18 6-12 12M6 6l12 12" />
-        </svg>
-      )
-    case 'arrow':
-      return (
-        <svg {...common}>
-          <path d="M5 12h14m-6-6 6 6-6 6" />
-        </svg>
-      )
-    case 'menu':
-      return (
-        <svg {...common}>
-          <path d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
-      )
-    case 'shield':
-      return (
-        <svg {...common}>
-          <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
-      )
-    case 'sparkle':
-      return (
-        <svg {...common}>
-          <path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-2-5.8L4 11l6-2.2L12 3Z" />
-          <path d="m19 14 1.2 2.8L23 18l-2.8 1.2L19 22l-1.2-2.8L15 18l2.8-1.2L19 14Z" />
-        </svg>
-      )
+      return <svg {...common}><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></svg>
+    case 'home':
+      return <svg {...common}><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z" /></svg>
+    case 'plus':
+      return <svg {...common}><path d="M12 5v14M5 12h14" /></svg>
+    case 'map':
+      return <svg {...common}><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z" /><path d="M9 3v15m6-12v15" /></svg>
+    case 'users':
+      return <svg {...common}><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="10" cy="7" r="4" /><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+    case 'chart':
+      return <svg {...common}><path d="M4 20V10m6 10V4m6 16v-7m6 7H2" /></svg>
+    case 'trophy':
+      return <svg {...common}><path d="M8 21h8m-4-4v4M7 4h10v5a5 5 0 0 1-10 0Zm0 2H3v2a5 5 0 0 0 5 5m9-7h4v2a5 5 0 0 1-5 5" /></svg>
+    case 'message':
+      return <svg {...common}><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-4-.9L3 21l1.9-5.5a9 9 0 0 1-.9-4A8.5 8.5 0 0 1 12.5 3H13a8.5 8.5 0 0 1 8 8.5Z" /></svg>
+    case 'camera':
+      return <svg {...common}><path d="M14 5 12.5 3h-5L6 5H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z" /><circle cx="12" cy="12" r="4" /></svg>
+    case 'file':
+      return <svg {...common}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M8 13h8m-8 4h8" /></svg>
+    default:
+      return <svg {...common}><circle cx="12" cy="12" r="9" /></svg>
   }
 }
 
-function getCategoryClass(category: Category) {
-  return category.toLowerCase().replace(/\s+/g, '-')
+async function searchLocations(query: string): Promise<LocationSuggestion[]> {
+  const params = new URLSearchParams({ q: query, format: 'jsonv2', addressdetails: '1', limit: '6' })
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`)
+  if (!response.ok) throw new Error('Location search failed')
+  const results: { display_name: string; lat: string; lon: string }[] = await response.json()
+  return results.map((item) => ({ label: item.display_name, lat: item.lat, lon: item.lon }))
+}
+
+async function reverseGeocode(latitude: number, longitude: number): Promise<string> {
+  const params = new URLSearchParams({ lat: String(latitude), lon: String(longitude), format: 'jsonv2', addressdetails: '1' })
+  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`)
+  if (!response.ok) throw new Error('Could not find the address')
+  const result: { display_name?: string } = await response.json()
+  if (!result.display_name) throw new Error('No address was found for these coordinates')
+  return result.display_name
 }
 
 function App() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    try {
-      return localStorage.getItem('civiclens-theme') === 'dark'
-        ? 'dark'
-        : 'light'
-    } catch {
-      return 'light'
-    }
-  })
-
+  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('civiclens-theme') as Theme) || 'light')
+  const [view, setView] = useState<View>('community')
   const [issues, setIssues] = useState<Issue[]>(initialIssues)
-  const [votedIds, setVotedIds] = useState<number[]>([])
-  const [activeCategory, setActiveCategory] =
-    useState<Category | 'All issues'>('All issues')
-  const [activeSort, setActiveSort] = useState('Trending')
-  const [search, setSearch] = useState('')
-  const [showReportForm, setShowReportForm] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [selectedIssueId, setSelectedIssueId] = useState('CL-1024')
+  const [searchText, setSearchText] = useState('')
   const [reportTitle, setReportTitle] = useState('')
   const [reportDescription, setReportDescription] = useState('')
-  const [reportCategory, setReportCategory] = useState<Category>('Roads')
+  const [reportCategory, setReportCategory] = useState(categories[0])
   const [reportLocality, setReportLocality] = useState('')
-  const [formError, setFormError] = useState('')
-  const [reportNotice, setReportNotice] = useState('')
-  const [reportFiles, setReportFiles] = useState<File[]>([])
-  const [fileError, setFileError] = useState('')  
+  const [reportCoordinates, setReportCoordinates] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([])
+  const [locationLoading, setLocationLoading] = useState(false)
+  const [locationMessage, setLocationMessage] = useState('')
+  const [gpsLoading, setGpsLoading] = useState(false)
+  const [formMessage, setFormMessage] = useState('')
+  const [votedIds, setVotedIds] = useState<string[]>([])
+  const [sort, setSort] = useState<'Hot' | 'New' | 'Top'>('Hot')
+  const [filter, setFilter] = useState('All')
+  const [commentText, setCommentText] = useState('')
+  const [comments, setComments] = useState<Record<string, string[]>>({})
+  const searchTimer = useRef<number | undefined>(undefined)
+  const selectedLocationRef = useRef(false)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    try {
-      localStorage.setItem('civiclens-theme', theme)
-    } catch {
-      // The theme still works if browser storage is unavailable.
-    }
+    localStorage.setItem('civiclens-theme', theme)
   }, [theme])
 
-  const visibleIssues = useMemo(() => {
-    const query = search.trim().toLowerCase()
-
-    const filtered = issues.filter((issue) => {
-      const matchesCategory =
-        activeCategory === 'All issues' || issue.category === activeCategory
-
-      const matchesSearch =
-        !query ||
-        [
-          issue.title,
-          issue.description,
-          issue.location,
-          issue.locality,
-          issue.category,
-        ].some((value) => value.toLowerCase().includes(query))
-
-      return matchesCategory && matchesSearch
-    })
-
-    return [...filtered].sort((a, b) => {
-      if (activeSort === 'Latest') return b.id - a.id
-      if (activeSort === 'Most supported') return b.votes - a.votes
-      if (activeSort === 'Critical issues') {
-        const severityRank: Record<Severity, number> = {
-          Critical: 4,
-          High: 3,
-          Medium: 2,
-          Low: 1,
+  useEffect(() => {
+    const query = reportLocality.trim()
+    if (selectedLocationRef.current) {
+      selectedLocationRef.current = false
+      return
+    }
+    if (query.length < 2) {
+      setLocationSuggestions([])
+      setLocationLoading(false)
+      setLocationMessage('')
+      return
+    }
+    let cancelled = false
+    window.clearTimeout(searchTimer.current)
+    searchTimer.current = window.setTimeout(async () => {
+      setLocationLoading(true)
+      setLocationMessage('')
+      try {
+        const results = await searchLocations(query)
+        if (cancelled) return
+        setLocationSuggestions(results)
+        setLocationMessage(results.length ? '' : 'Locality not found')
+      } catch {
+        if (!cancelled) {
+          setLocationSuggestions([])
+          setLocationMessage('Could not search locations. You can still enter the locality manually.')
         }
-        return severityRank[b.severity] - severityRank[a.severity]
+      } finally {
+        if (!cancelled) setLocationLoading(false)
       }
-      return b.votes + b.comments - (a.votes + a.comments)
+    }, 550)
+    return () => {
+      cancelled = true
+      window.clearTimeout(searchTimer.current)
+    }
+  }, [reportLocality])
+
+  const selectedIssue = issues.find((issue) => issue.id === selectedIssueId) || issues[0]
+  const filteredIssues = issues
+    .filter((issue) => filter === 'All' || issue.status === filter)
+    .filter((issue) => `${issue.title} ${issue.description} ${issue.locality} ${issue.category}`.toLowerCase().includes(searchText.toLowerCase()))
+    .sort((a, b) => sort === 'New' ? b.id.localeCompare(a.id) : sort === 'Top' ? b.votes - a.votes : b.votes - a.votes)
+
+  function addFiles(event: ChangeEvent<HTMLInputElement>) {
+    const incoming = Array.from(event.target.files || [])
+    setAttachments((current) => {
+      const next = [...current]
+      incoming.forEach((file) => {
+        if (!next.some((item) => item.file.name === file.name && item.file.size === file.size)) {
+          next.push({ id: `${file.name}-${file.size}-${file.lastModified}`, file })
+        }
+      })
+      return next
     })
-  }, [issues, activeCategory, activeSort, search])
+    event.target.value = ''
+  }
 
-  function toggleVote(issueId: number) {
-    const alreadyVoted = votedIds.includes(issueId)
+  function removeFile(id: string) {
+    setAttachments((current) => current.filter((item) => item.id !== id))
+  }
 
-    setVotedIds((current) =>
-      alreadyVoted
-        ? current.filter((id) => id !== issueId)
-        : [...current, issueId],
+  function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      setLocationMessage('Location is not supported by this browser. Enter the locality manually.')
+      return
+    }
+    setGpsLoading(true)
+    setLocationMessage('Please allow location access if your browser asks.')
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords
+        setReportCoordinates({ latitude, longitude })
+        try {
+          const address = await reverseGeocode(latitude, longitude)
+          selectedLocationRef.current = true
+          setReportLocality(address)
+          setLocationSuggestions([])
+          setLocationMessage('Current location detected.')
+        } catch {
+          selectedLocationRef.current = true
+          setReportLocality(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`)
+          setLocationSuggestions([])
+          setLocationMessage('Coordinates detected; address lookup was unavailable.')
+        } finally {
+          setGpsLoading(false)
+        }
+      },
+      (error) => {
+        setGpsLoading(false)
+        if (error.code === error.PERMISSION_DENIED) setLocationMessage('Permission denied. You can enter the locality manually.')
+        else if (error.code === error.TIMEOUT) setLocationMessage('Location request timed out. Try again or type the locality.')
+        else setLocationMessage('Unable to detect location. Please type the locality manually.')
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     )
-
-    setIssues((current) =>
-      current.map((issue) =>
-        issue.id === issueId
-          ? { ...issue, votes: issue.votes + (alreadyVoted ? -1 : 1) }
-          : issue,
-      ),
-    )
   }
 
-  function addReportFiles(fileList: FileList | null) {
-  if (!fileList) return
-
-  const incomingFiles = Array.from(fileList)
-
-  if (reportFiles.length + incomingFiles.length > 5) {
-    setFileError('You can attach a maximum of 5 files.')
-    return
+  function chooseLocation(suggestion: LocationSuggestion) {
+    selectedLocationRef.current = true
+    setReportLocality(suggestion.label)
+    setReportCoordinates({ latitude: Number(suggestion.lat), longitude: Number(suggestion.lon) })
+    setLocationSuggestions([])
+    setLocationMessage('Location selected.')
   }
-
-  const oversizedFile = incomingFiles.find(
-    (file) => file.size > 10 * 1024 * 1024,
-  )
-
-  if (oversizedFile) {
-    setFileError('Each file must be 10 MB or smaller.')
-    return
-  }
-
-  setReportFiles((current) => [...current, ...incomingFiles])
-  setFileError('')
-}
-
-function removeReportFile(indexToRemove: number) {
-  setReportFiles((current) =>
-    current.filter((_, index) => index !== indexToRemove),
-  )
-  setFileError('')
-}
 
   function submitReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-
-    const title = reportTitle.trim()
-    const description = reportDescription.trim()
-    const locality = reportLocality.trim()
-
-    if (title.length < 5) {
-      setFormError('Please enter a title with at least 5 characters.')
+    if (!reportTitle.trim() || !reportDescription.trim() || !reportLocality.trim()) {
+      setFormMessage('Please complete the title, description and locality.')
       return
     }
-
-    if (description.length < 15) {
-      setFormError('Please describe the issue in at least 15 characters.')
-      return
-    }
-
-    if (!locality) {
-      setFormError('Please enter the locality where the issue is located.')
-      return
-    }
-
+    const nextNumber = 1025 + issues.length - initialIssues.length
     const newIssue: Issue = {
-      id: Math.max(0, ...issues.map((issue) => issue.id)) + 1,
-      title,
-      description,
+      id: `CL-${nextNumber}`,
+      title: reportTitle.trim(),
+      description: reportDescription.trim(),
       category: reportCategory,
-      location: locality,
-      locality,
+      locality: reportLocality.trim(),
+      createdAt: 'Just now',
       votes: 1,
-      comments: 0,
       status: 'Reported',
-      severity: 'Medium',
-      department: 'Pending review',
-      time: 'Just now',
-      evidence: reportFiles,
+      attachments,
+      coordinates: reportCoordinates,
     }
-
     setIssues((current) => [newIssue, ...current])
-    setVotedIds((current) => [...current, newIssue.id])
-    setActiveCategory('All issues')
-    setActiveSort('Latest')
-    setSearch('')
+    setSelectedIssueId(newIssue.id)
     setReportTitle('')
     setReportDescription('')
+    setReportCategory(categories[0])
     setReportLocality('')
-    setReportFiles([])
-    setFileError('')
-    setFormError('')
-    setShowReportForm(false)
-    setReportNotice(
-      'Demo report created locally. It has not been sent to a real department.',
-    )
+    setReportCoordinates(null)
+    setAttachments([])
+    setLocationSuggestions([])
+    setLocationMessage('')
+    setFormMessage('Report created in this frontend demo. Backend submission is not connected yet.')
+    setView('issue')
   }
 
-  const isDark = theme === 'dark'
+  function toggleVote(issueId: string) {
+    const alreadyVoted = votedIds.includes(issueId)
+    setVotedIds((current) => alreadyVoted ? current.filter((id) => id !== issueId) : [...current, issueId])
+    setIssues((current) => current.map((issue) => issue.id === issueId ? { ...issue, votes: issue.votes + (alreadyVoted ? -1 : 1) } : issue))
+  }
+
+  function addComment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!commentText.trim() || !selectedIssue) return
+    setComments((current) => ({ ...current, [selectedIssue.id]: [...(current[selectedIssue.id] || []), commentText.trim()] }))
+    setCommentText('')
+  }
+
+  const navItems: { id: View; label: string; icon: string }[] = [
+    { id: 'community', label: 'Community', icon: 'home' },
+    { id: 'report', label: 'Report an issue', icon: 'plus' },
+    { id: 'issue', label: 'Issue details', icon: 'message' },
+    { id: 'admin', label: 'Department dashboard', icon: 'chart' },
+    { id: 'leaderboard', label: 'Leaderboard', icon: 'trophy' },
+    { id: 'map', label: 'Map & hotspots', icon: 'map' },
+  ]
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <a className="brand" href="#home" aria-label="CivicLens AI home">
-          <span className="brand-mark">
-            <Icon name="leaf" size={25} />
-          </span>
-          <span className="brand-copy">
-            <span className="brand-name">civic<span>lens</span></span>
-            <span className="brand-tagline">YOUR CITY, IN FOCUS</span>
-          </span>
+      <aside className="sidebar">
+        <a className="brand" href="#home" onClick={(event) => { event.preventDefault(); setView('community') }}>
+          <span className="brand-mark">C</span>
+          <span><strong>CivicLens</strong><small>AI · Civic Community</small></span>
         </a>
-
-        <nav className={`main-nav ${mobileMenuOpen ? 'nav-open' : ''}`}>
-          <a className="nav-link nav-link-active" href="#feed">
-            Community
-          </a>
-          <a className="nav-link" href="#how-it-works">
-            How it works
-          </a>
-          <a className="nav-link" href="#accountability">
-            Accountability
-          </a>
+        <div className="city-chip"><Icon name="pin" size={16} /><span>Imphal, Manipur</span><span className="online-dot" /></div>
+        <p className="nav-caption">WORKSPACE</p>
+        <nav className="main-nav" aria-label="Main navigation">
+          {navItems.map((item) => (
+            <button key={item.id} className={`nav-item ${view === item.id ? 'active' : ''}`} onClick={() => { setView(item.id); setFormMessage('') }}>
+              <Icon name={item.icon} size={18} /><span>{item.label}</span>
+              {item.id === 'report' && <span className="nav-plus">+</span>}
+            </button>
+          ))}
         </nav>
-
-        <div className="topbar-actions">
-          <button
-            className="theme-toggle"
-            type="button"
-            onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-            title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-          >
-            <Icon name={isDark ? 'sun' : 'moon'} size={19} />
-          </button>
-
-          <button
-            className="button button-primary header-report"
-            type="button"
-            onClick={() => setShowReportForm(true)}
-          >
-            <Icon name="plus" size={17} />
-            <span>Report an issue</span>
-          </button>
-
-          <button
-            className="mobile-menu-button"
-            type="button"
-            aria-label="Toggle navigation"
-            aria-expanded={mobileMenuOpen}
-            onClick={() => setMobileMenuOpen((open) => !open)}
-          >
-            <Icon name={mobileMenuOpen ? 'close' : 'menu'} size={22} />
-          </button>
+        <div className="sidebar-bottom">
+          <div className="points-card"><span className="points-icon"><Icon name="trophy" size={20} /></span><div><small>Your contribution</small><strong>120 points</strong></div></div>
+          <div className="profile-row"><div className="avatar">A</div><div><strong>Community member</strong><small>Citizen account</small></div><span className="profile-menu">•••</span></div>
         </div>
-      </header>
+      </aside>
 
-      <main id="home">
-        <section className="hero-section">
-          <div className="hero-copy">
-            <div className="eyebrow">
-              <span className="eyebrow-dot" />
-              A BETTER CITY STARTS HERE
-            </div>
-            <h1>
-              See a problem.
-              <br />
-              <span>Make it matter.</span>
-            </h1>
-            <p className="hero-description">
-              Your neighbourhood, your voice. Report local issues, support
-              your community, and follow every step toward a better city.
-            </p>
-
-            <div className="hero-actions">
-              <button
-                className="button button-primary button-large"
-                type="button"
-                onClick={() => setShowReportForm(true)}
-              >
-                <Icon name="plus" size={18} />
-                Report an issue
-              </button>
-              <a className="text-link" href="#feed">
-                Explore community <Icon name="arrow" size={17} />
-              </a>
-            </div>
-
-            <div className="hero-note">
-              <Icon name="shield" size={16} />
-              <span>Community-powered. Transparent by design.</span>
-            </div>
+      <main className="main-area">
+        <header className="topbar">
+          <div className="mobile-brand"><span className="brand-mark">C</span><strong>CivicLens AI</strong></div>
+          <div className="breadcrumb"><span>Workspace</span><span>/</span><strong>{navItems.find((item) => item.id === view)?.label}</strong></div>
+          <div className="topbar-actions">
+            <label className="search-box"><span className="search-symbol">⌕</span><input value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search reports..." aria-label="Search reports" /></label>
+            <button className="theme-toggle" type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}><Icon name={theme === 'light' ? 'moon' : 'sun'} size={19} /></button>
+            <button className="primary-button top-report" onClick={() => { setView('report'); setFormMessage('') }}><Icon name="plus" size={17} /> Report issue</button>
           </div>
+        </header>
 
-          <div className="hero-art" aria-label="Illustration of a greener city">
-            <div className="art-sun" />
-            <div className="art-cloud art-cloud-one" />
-            <div className="art-cloud art-cloud-two" />
-            <div className="art-building building-one">
-              <span /><span /><span /><span />
-            </div>
-            <div className="art-building building-two">
-              <span /><span /><span /><span /><span /><span />
-            </div>
-            <div className="art-building building-three">
-              <span /><span /><span /><span />
-            </div>
-            <div className="art-tree tree-one"><span /></div>
-            <div className="art-tree tree-two"><span /></div>
-            <div className="art-road" />
-            <div className="art-road-line" />
-            <div className="art-issue-pin">
-              <span className="pin-icon"><Icon name="pin" size={19} /></span>
-              <span>
-                <strong>Your neighbourhood</strong>
-                <small>Every voice counts</small>
-              </span>
-            </div>
-            <div className="art-caption">
-              <span className="art-caption-dot" />
-              Small actions. Real community.
-            </div>
-          </div>
-        </section>
-
-        <section className="community-section" id="feed">
-          <div className="section-heading">
-            <div>
-              <div className="section-kicker">THE COMMUNITY BOARD</div>
-              <h2>What needs attention?</h2>
-              <p className="section-description">
-                Local concerns, shared openly. Add your voice to the issues
-                that matter.
-              </p>
-            </div>
-            <div className="demo-label">
-              <span className="demo-label-dot" />
-              Interactive demo
-            </div>
-          </div>
-
-          {reportNotice && (
-            <div className="notice-banner" role="status">
-              <Icon name="check" size={18} />
-              <span>{reportNotice}</span>
-              <button
-                type="button"
-                className="icon-button notice-close"
-                aria-label="Dismiss notice"
-                onClick={() => setReportNotice('')}
-              >
-                <Icon name="close" size={17} />
-              </button>
-            </div>
+        <div className="content">
+          {view === 'community' && (
+            <>
+              <section className="welcome-row">
+                <div><p className="eyebrow">CIVIC PULSE · COMMUNITY</p><h1>Your city, <span>your voice.</span></h1><p className="muted">Report local issues, support your neighbours, and follow progress together.</p></div>
+                <button className="primary-button" onClick={() => { setView('report'); setFormMessage('') }}><Icon name="plus" size={17} /> Create a report</button>
+              </section>
+              <section className="stats-grid">
+                <div className="stat-card"><span className="stat-icon"><Icon name="file" /></span><div><small>Community reports</small><strong>{issues.length + 128}</strong><small className="stat-foot">Across your city</small></div></div>
+                <div className="stat-card"><span className="stat-icon"><Icon name="chart" /></span><div><small>In progress</small><strong>{issues.filter((issue) => issue.status === 'In Progress').length + 12}</strong><small className="stat-foot">Being addressed</small></div></div>
+                <div className="stat-card"><span className="stat-icon"><Icon name="users" /></span><div><small>Community members</small><strong>2,480</strong><small className="stat-foot">Making a difference</small></div></div>
+                <div className="stat-card"><span className="stat-icon"><Icon name="trophy" /></span><div><small>Issues resolved</small><strong>{issues.filter((issue) => issue.status === 'Resolved').length + 86}</strong><small className="stat-foot">Together we improve</small></div></div>
+              </section>
+              <section className="feed-layout">
+                <div className="feed-main">
+                  <div className="section-heading"><div><h2>Community feed</h2><p className="muted">What needs attention in your neighbourhood?</p></div><div className="sort-tabs">{(['Hot', 'New', 'Top'] as const).map((item) => <button key={item} className={sort === item ? 'selected' : ''} onClick={() => setSort(item)}>{item}</button>)}</div></div>
+                  <div className="filter-row">{['All', 'Reported', 'In Progress', 'Resolved'].map((item) => <button key={item} className={filter === item ? 'filter-active' : ''} onClick={() => setFilter(item)}>{item}</button>)}</div>
+                  <div className="issue-list">
+                    {filteredIssues.map((issue) => <IssueCard key={issue.id} issue={issue} voted={votedIds.includes(issue.id)} onVote={() => toggleVote(issue.id)} onOpen={() => { setSelectedIssueId(issue.id); setView('issue') }} />)}
+                    {filteredIssues.length === 0 && <div className="empty-state"><Icon name="file" size={28} /><strong>No reports found</strong><p>Try another search or filter.</p></div>}
+                  </div>
+                </div>
+                <aside className="feed-side">
+                  <div className="panel-card city-panel"><div className="panel-title"><h3>City community</h3><span className="live-badge">● Live demo</span></div><div className="city-banner"><span className="city-emblem"><Icon name="home" size={27} /></span><div><strong>Imphal Community</strong><small>Manipur, India</small></div></div><div className="city-stats"><div><strong>2.4k</strong><small>Members</small></div><div><strong>134</strong><small>Reports</small></div><div><strong>86</strong><small>Resolved</small></div></div><button className="outline-button full-width" onClick={() => setView('map')}><Icon name="map" size={16} /> Explore city issues</button></div>
+                  <div className="panel-card"><h3>How CivicLens works</h3><div className="mini-step"><span>1</span><div><strong>Report an issue</strong><small>Share the location and evidence.</small></div></div><div className="mini-step"><span>2</span><div><strong>Community supports</strong><small>Vote and add useful updates.</small></div></div><div className="mini-step"><span>3</span><div><strong>Department responds</strong><small>Follow progress transparently.</small></div></div></div>
+                </aside>
+              </section>
+            </>
           )}
 
-          <div className="feed-toolbar">
-            <label className="search-box">
-              <Icon name="search" size={19} />
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search issues, places..."
-                aria-label="Search issues and locations"
-              />
-              {search && (
-                <button
-                  className="search-clear"
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => setSearch('')}
-                >
-                  <Icon name="close" size={15} />
-                </button>
-              )}
-            </label>
-
-            <label className="sort-control">
-              <Icon name="filter" size={17} />
-              <span className="sort-label">Sort</span>
-              <select
-                value={activeSort}
-                onChange={(event) => setActiveSort(event.target.value)}
-                aria-label="Sort issues"
-              >
-                <option>Trending</option>
-                <option>Latest</option>
-                <option>Most supported</option>
-                <option>Critical issues</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="feed-layout">
-            <aside className="feed-sidebar">
-              <div className="sidebar-heading">Browse issues</div>
-              <div className="category-list">
-                {categories.map((category) => {
-                  const count =
-                    category === 'All issues'
-                      ? issues.length
-                      : issues.filter((issue) => issue.category === category)
-                          .length
-
-                  return (
-                    <button
-                      key={category}
-                      type="button"
-                      className={`category-button ${
-                        activeCategory === category ? 'category-active' : ''
-                      }`}
-                      onClick={() => setActiveCategory(category)}
-                    >
-                      <span className="category-name">
-                        {category === 'All issues' ? (
-                          <span className="category-symbol all-symbol">
-                            <Icon name="menu" size={17} />
-                          </span>
-                        ) : (
-                          <span
-                            className={`category-symbol ${getCategoryClass(category)}`}
-                          >
-                            <span />
-                          </span>
-                        )}
-                        {category}
-                      </span>
-                      <span className="category-count">{count}</span>
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div className="sidebar-divider" />
-
-              <div className="sidebar-tip">
-                <span className="tip-icon"><Icon name="sparkle" size={19} /></span>
-                <strong>Better together.</strong>
-                <p>
-                  Support an existing report before creating a new one about
-                  the same problem.
-                </p>
-                <a href="#how-it-works">
-                  Why it matters <Icon name="arrow" size={14} />
-                </a>
-              </div>
-            </aside>
-
-            <div className="issue-feed">
-              <div className="feed-heading">
-                <div>
-                  <h3>
-                    {activeCategory === 'All issues'
-                      ? 'Community reports'
-                      : activeCategory}
-                  </h3>
-                  <p>
-                    {visibleIssues.length}{' '}
-                    {visibleIssues.length === 1 ? 'issue' : 'issues'} found
-                  </p>
+          {view === 'report' && (
+            <section className="form-page">
+              <div className="page-heading"><p className="eyebrow">HELP IMPROVE YOUR CITY</p><h1>Report an <span>issue</span></h1><p className="muted">Share clear details and attach evidence so the right team can understand the problem.</p></div>
+              <form className="report-form panel-card" onSubmit={submitReport}>
+                <div className="form-section-title"><span className="step-number">01</span><div><h2>Issue details</h2><p className="muted">Describe what is happening.</p></div></div>
+                <label className="field-label">Issue title <span className="required">*</span><input value={reportTitle} onChange={(event) => setReportTitle(event.target.value)} maxLength={120} placeholder="e.g. Large pothole near the main gate" required /></label>
+                <label className="field-label">Description <span className="required">*</span><textarea value={reportDescription} onChange={(event) => setReportDescription(event.target.value)} rows={5} maxLength={2000} placeholder="Describe the issue, when it started, and how it affects the community..." required /><small className="field-hint">{reportDescription.length}/2000 characters</small></label>
+                <div className="form-two-col">
+                  <label className="field-label">Category <span className="required">*</span><select value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}>{categories.map((category) => <option key={category}>{category}</option>)}</select><small className="field-hint">This is the citizen-selected category; AI classification is a separate backend step.</small></label>
+                  <div className="field-label locality-field"><label htmlFor="report-locality">City / locality <span className="required">*</span></label><div className="locality-input-wrap"><input id="report-locality" value={reportLocality} onChange={(event) => { setReportLocality(event.target.value); setReportCoordinates(null); setLocationMessage('') }} placeholder="Type a city or locality..." maxLength={200} autoComplete="off" required /><button type="button" className="location-button" onClick={useCurrentLocation} disabled={gpsLoading}><Icon name="pin" size={15} />{gpsLoading ? 'Locating…' : 'Use my location'}</button></div>{locationLoading && <p className="location-message">Searching locations…</p>}{locationMessage && <p className="location-message" role="status">{locationMessage}</p>}{locationSuggestions.length > 0 && <div className="locality-suggestions" role="listbox">{locationSuggestions.map((suggestion) => <button type="button" role="option" aria-selected={false} className="locality-suggestion" key={`${suggestion.lat}-${suggestion.lon}`} onClick={() => chooseLocation(suggestion)}><Icon name="pin" size={16} /><span>{suggestion.label}</span></button>)}</div>}</div>
                 </div>
-                <button
-                  type="button"
-                  className="button button-outline compact-report"
-                  onClick={() => setShowReportForm(true)}
-                >
-                  <Icon name="plus" size={16} /> Add report
-                </button>
-              </div>
-
-              {visibleIssues.length > 0 ? (
-                <div className="issue-list">
-                  {visibleIssues.map((issue) => {
-                    const hasVoted = votedIds.includes(issue.id)
-
-                    return (
-                      <article className="issue-card" key={issue.id}>
-                        <div className="issue-card-main">
-                          <div className="issue-meta">
-                            <span
-                              className={`category-pill ${getCategoryClass(issue.category)}`}
-                            >
-                              <span className="pill-dot" />
-                              {issue.category}
-                            </span>
-                            <span className="meta-separator">·</span>
-                            <span className="issue-time">
-                              <Icon name="clock" size={13} />
-                              {issue.time}
-                            </span>
-                          </div>
-
-                          <h4 className="issue-title">{issue.title}</h4>
-                          <p className="issue-description">{issue.description}</p>
-
-                          <div className="issue-location">
-                            <Icon name="pin" size={15} />
-                            <span>{issue.location}</span>
-                            <span className="location-separator">·</span>
-                            <span>{issue.locality}</span>
-                          </div>
-
-                          <div className="issue-footer">
-                            <div className="issue-engagement">
-                              <button
-                                type="button"
-                                className={`vote-button ${hasVoted ? 'vote-active' : ''}`}
-                                onClick={() => toggleVote(issue.id)}
-                                aria-label={`${hasVoted ? 'Remove support from' : 'Support'} ${issue.title}`}
-                                aria-pressed={hasVoted}
-                              >
-                                <Icon name="thumb" size={16} filled={hasVoted} />
-                                <span>{issue.votes}</span>
-                              </button>
-                              <span className="engagement-divider" />
-                              <span className="comment-count">
-                                <Icon name="message" size={15} />
-                                {issue.comments} comments
-                              </span>
-                            </div>
-
-                            <button
-                              type="button"
-                              className="issue-detail-button"
-                              onClick={() =>
-                                setReportNotice(
-                                  `Issue details: ${issue.title}. Department: ${issue.department}. This is demonstration data; no live agency status is connected.`,
-                                )
-                              }
-                            >
-                              Details <Icon name="arrow" size={15} />
-                            </button>
-                          </div>
-                        </div>
-
-                        <aside className="issue-card-aside">
-                          <span className={`severity severity-${issue.severity.toLowerCase()}`}>
-                            <span className="severity-dot" />
-                            {issue.severity}
-                          </span>
-                          <span className={`status-badge status-${issue.status.toLowerCase().replace(/\s+/g, '-')}`}>
-                            {issue.status === 'Resolved' && <Icon name="check" size={12} />}
-                            {issue.status}
-                          </span>
-                          <span className="department-label">SUGGESTED DEPT.</span>
-                          <span className="department-name">{issue.department}</span>
-                          <span className="ai-note">
-                            <Icon name="sparkle" size={13} /> Demo assessment
-                          </span>
-                        </aside>
-                      </article>
-                    )
-                  })}
+                <div className="form-section-title evidence-heading"><span className="step-number">02</span><div><h2>Attach evidence <span className="optional">(optional)</span></h2><p className="muted">Photos, videos or documents can help explain the issue.</p></div></div>
+                <div className="upload-options">
+                  <label className="upload-option"><input type="file" accept="image/*" capture="environment" onChange={addFiles} /><span className="upload-icon"><Icon name="camera" size={21} /></span><strong>Camera</strong><small>Take a photo</small></label>
+                  <label className="upload-option"><input type="file" accept="image/*" multiple onChange={addFiles} /><span className="upload-icon"><Icon name="file" size={21} /></span><strong>Photos</strong><small>Choose images</small></label>
+                  <label className="upload-option"><input type="file" accept="video/*" multiple onChange={addFiles} /><span className="upload-icon"><span className="video-glyph">▶</span></span><strong>Videos</strong><small>Choose clips</small></label>
+                  <label className="upload-option"><input type="file" accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.csv,application/*,text/*" multiple onChange={addFiles} /><span className="upload-icon"><Icon name="file" size={21} /></span><strong>Files</strong><small>Documents</small></label>
                 </div>
-              ) : (
-                <div className="empty-state">
-                  <span className="empty-state-icon"><Icon name="search" size={25} /></span>
-                  <h3>No issues found</h3>
-                  <p>Try another search or choose a different category.</p>
-                  <button
-                    className="button button-outline"
-                    type="button"
-                    onClick={() => {
-                      setSearch('')
-                      setActiveCategory('All issues')
-                    }}
-                  >
-                    Clear filters
-                  </button>
-                </div>
-              )}
+                {attachments.length > 0 && <div className="attachment-list"><div className="attachment-list-heading">{attachments.length} attachment{attachments.length === 1 ? '' : 's'} selected</div>{attachments.map((attachment) => <div className="attachment-row" key={attachment.id}><Icon name="file" size={17} /><span className="attachment-name">{attachment.file.name}</span><small>{formatBytes(attachment.file.size)}</small><button type="button" className="remove-file" onClick={() => removeFile(attachment.id)} aria-label={`Remove ${attachment.file.name}`}>×</button></div>)}</div>}
+                <p className="privacy-note"><Icon name="file" size={16} /> Your evidence is selected locally in this demo. Persistent upload requires the backend upload endpoint.</p>
+                {formMessage && <p className="form-message" role="status">{formMessage}</p>}
+                <div className="form-actions"><button type="button" className="outline-button" onClick={() => setView('community')}>Cancel</button><button type="submit" className="primary-button">Submit report <span>→</span></button></div>
+              </form>
+            </section>
+          )}
 
-              <div className="feed-end-note">
-                <Icon name="shield" size={16} />
-                <span>
-                  Demo reports are stored only in this page's current session.
-                  They have not been sent to a real authority.
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
+          {view === 'issue' && selectedIssue && (
+            <section className="detail-page">
+              <button className="back-link" onClick={() => setView('community')}>← Back to community</button>
+              <div className="detail-layout"><div className="detail-main panel-card"><div className="detail-topline"><span className="issue-id">{selectedIssue.id}</span><StatusBadge status={selectedIssue.status} /></div><h1>{selectedIssue.title}</h1><p className="detail-description">{selectedIssue.description}</p><div className="issue-meta"><span><Icon name="pin" size={16} />{selectedIssue.locality}</span><span>·</span><span>{selectedIssue.createdAt}</span><span>·</span><span>{selectedIssue.category}</span></div>{selectedIssue.attachments.length > 0 && <div className="detail-attachments"><h3>Attached evidence</h3>{selectedIssue.attachments.map((item) => <div key={item.id} className="attachment-row"><Icon name="file" size={16} /><span className="attachment-name">{item.file.name}</span><small>{formatBytes(item.file.size)}</small></div>)}</div>}<div className="detail-actions"><button className={`vote-button ${votedIds.includes(selectedIssue.id) ? 'voted' : ''}`} onClick={() => toggleVote(selectedIssue.id)}><Icon name="thumb" size={18} /> {votedIds.includes(selectedIssue.id) ? 'Supported' : 'Upvote'} <strong>{selectedIssue.votes}</strong></button><span className="detail-action-muted"><Icon name="message" size={16} /> {(comments[selectedIssue.id] || []).length} comments</span></div><div className="detail-tabs"><span className="active">Comments ({(comments[selectedIssue.id] || []).length})</span><span>Updates</span><span>Details</span></div><form className="comment-form" onSubmit={addComment}><input value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="Add a constructive comment or update..." /><button className="primary-button" type="submit">Post</button></form>{(comments[selectedIssue.id] || []).map((comment, index) => <div className="comment-item" key={`${index}-${comment}`}><div className="avatar small-avatar">C</div><div><strong>Community member</strong><p>{comment}</p></div></div>)}</div><aside className="detail-aside"><div className="panel-card"><h3>Report status</h3><StatusBadge status={selectedIssue.status} /><div className="timeline"><div className="timeline-item done"><span /><div><strong>Reported</strong><small>Issue submitted to community</small></div></div><div className={`timeline-item ${selectedIssue.status !== 'Reported' ? 'done' : ''}`}><span /><div><strong>In progress</strong><small>Department action stage</small></div></div><div className={`timeline-item ${selectedIssue.status === 'Resolved' ? 'done' : ''}`}><span /><div><strong>Resolved</strong><small>Resolution confirmation</small></div></div></div></div><div className="panel-card ai-placeholder"><span className="ai-tag">AI TRIAGE · BACKEND</span><h3>Incident analysis</h3><p>Category prediction, severity, reasoning and department recommendation will appear here when connected to the AI API.</p><span className="pending-pill">Awaiting backend response</span></div></aside></div>
+            </section>
+          )}
 
-        <section className="how-section" id="how-it-works">
-          <div className="how-heading">
-            <span className="section-kicker">A SIMPLE WAY FORWARD</span>
-            <h2>From concern to community action.</h2>
-            <p>Clear steps. Shared responsibility. Better-informed decisions.</p>
-          </div>
-          <div className="steps-grid">
-            <article className="step-card">
-              <span className="step-number">01</span>
-              <span className="step-icon"><Icon name="plus" size={21} /></span>
-              <h3>Report what you see</h3>
-              <p>Describe a local issue and tell your community where it needs attention.</p>
-            </article>
-            <article className="step-card">
-              <span className="step-number">02</span>
-              <span className="step-icon"><Icon name="thumb" size={21} /></span>
-              <h3>Build community support</h3>
-              <p>Support existing reports so shared concerns are easier to identify.</p>
-            </article>
-            <article className="step-card">
-              <span className="step-number">03</span>
-              <span className="step-icon"><Icon name="check" size={21} /></span>
-              <h3>Follow the progress</h3>
-              <p>Track updates transparently when an authorized department integration is available.</p>
-            </article>
-          </div>
-        </section>
+          {view === 'admin' && <section className="dashboard-page"><div className="page-heading"><p className="eyebrow">OPERATIONS</p><h1>Department <span>dashboard</span></h1><p className="muted">A frontend preview of the triage and accountability workspace.</p></div><div className="admin-stats"><div className="panel-card"><small>Assigned</small><strong>24</strong><span>Awaiting department action</span></div><div className="panel-card"><small>In progress</small><strong>12</strong><span>Work underway</span></div><div className="panel-card"><small>Resolved</small><strong>86</strong><span>Marked resolved</span></div><div className="panel-card"><small>High priority</small><strong>7</strong><span>Needs review</span></div></div><div className="panel-card table-panel"><div className="section-heading"><div><h2>Recent reports</h2><p className="muted">Demo data; real status updates require backend integration.</p></div><span className="pending-pill">Preview</span></div><div className="responsive-table"><table><thead><tr><th>Issue</th><th>Category</th><th>Locality</th><th>Status</th><th>Votes</th></tr></thead><tbody>{issues.map((issue) => <tr key={issue.id}><td><button className="table-link" onClick={() => { setSelectedIssueId(issue.id); setView('issue') }}>{issue.title}</button><small>{issue.id}</small></td><td>{issue.category}</td><td>{issue.locality}</td><td><StatusBadge status={issue.status} /></td><td>{issue.votes}</td></tr>)}</tbody></table></div></div></section>}
 
-        <section className="accountability-strip" id="accountability">
-          <span className="accountability-icon"><Icon name="shield" size={24} /></span>
-          <div>
-            <h3>Trust starts with transparency.</h3>
-            <p>
-              Community support is not the same as safety severity. AI
-              suggestions are not official decisions, and a submitted report
-              is not proof that an authority has received it.
-            </p>
-          </div>
-          <span className="accountability-tag">BUILT FOR ACCOUNTABILITY</span>
-        </section>
-      </main>
+          {view === 'leaderboard' && <section className="dashboard-page"><div className="page-heading"><p className="eyebrow">COMMUNITY IMPACT</p><h1>Rewards & <span>leaderboard</span></h1><p className="muted">Recognising citizens and departments that help improve the city.</p></div><div className="leaderboard-layout"><div className="panel-card"><div className="section-heading"><div><h2>Top contributors</h2><p className="muted">Illustrative demo entries</p></div><Icon name="trophy" size={24} /></div>{[{name:'Imphal Civic Circle',points:'4,320',rank:'01',label:'Community'},{name:'P.W.D. Team',points:'3,780',rank:'02',label:'Department'},{name:'Water Works',points:'2,640',rank:'03',label:'Department'},{name:'Community member',points:'120',rank:'04',label:'Citizen'}].map((person) => <div className="leader-row" key={person.rank}><span className={`rank rank-${person.rank}`}>{person.rank}</span><div className="leader-avatar">{person.name.charAt(0)}</div><div className="leader-name"><strong>{person.name}</strong><small>{person.label}</small></div><strong className="leader-points">{person.points} pts</strong></div>)}</div><div className="panel-card reward-panel"><span className="reward-medal"><Icon name="trophy" size={28} /></span><h2>Your impact matters</h2><p className="muted">Reports, constructive updates and verified community support can contribute to a transparent rewards system.</p><div className="reward-total"><strong>120</strong><span>community points</span></div><p className="field-hint">Point totals and reward rules will be provided by the backend.</p></div></div></section>}
 
-      <footer className="site-footer">
-        <a className="footer-brand" href="#home">
-          <Icon name="leaf" size={19} />
-          civic<span>lens</span>
-        </a>
-        <span>More connected communities start with listening.</span>
-        <span className="footer-demo">Forge26 · Prototype</span>
-      </footer>
-
-      {showReportForm && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setShowReportForm(false)
-              setFormError('')
-            }
-          }}
-        >
-          <section
-            className="report-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="report-modal-title"
-          >
-            <div className="modal-heading">
-              <div>
-                <span className="section-kicker">YOUR COMMUNITY, YOUR VOICE</span>
-                <h2 id="report-modal-title">Report an issue</h2>
-                <p>Share enough detail for neighbours to understand the problem.</p>
-              </div>
-              <button
-                type="button"
-                className="icon-button modal-close"
-                aria-label="Close report form"
-                onClick={() => {
-                  setShowReportForm(false)
-                  setFormError('')
-                }}
-              >
-                <Icon name="close" size={20} />
-              </button>
-            </div>
-
-            <div className="demo-form-note">
-              <Icon name="shield" size={16} />
-              Demo mode: this report will not be sent to a real department.
-            </div>
-
-            <form className="report-form" onSubmit={submitReport}>
-              <label>
-                Issue title
-                <input
-                  value={reportTitle}
-                  onChange={(event) => setReportTitle(event.target.value)}
-                  placeholder="e.g. Broken streetlight near the park"
-                  maxLength={100}
-                  required
-                />
-              </label>
-
-              <label>
-                Describe the problem
-                <textarea
-                  value={reportDescription}
-                  onChange={(event) => setReportDescription(event.target.value)}
-                  placeholder="What happened, and how does it affect the neighbourhood?"
-                  rows={4}
-                  maxLength={1000}
-                  required
-                />
-              </label>
-
-              <div className="form-row">
-                <label>
-                  Category
-                  <select
-                    value={reportCategory}
-                    onChange={(event) => setReportCategory(event.target.value as Category)}
-                  >
-                    {categories.filter((category): category is Category => category !== 'All issues').map((category) => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Locality
-                  <input
-                    value={reportLocality}
-                    onChange={(event) => setReportLocality(event.target.value)}
-                    placeholder="e.g. Lamphel"
-                    maxLength={100}
-                    required
-                  />
-                </label>
-              </div>
-                    
-<div className="evidence-upload">
-  <div className="evidence-heading">
-    <div>
-      <h3>Attach evidence</h3>
-      <p>
-        Add photos, videos, or documents to help people understand the issue.
-      </p>
-    </div>
-    <span className="evidence-count">{reportFiles.length}/5</span>
-  </div>
-
-  <div className="evidence-options">
-    <label className="evidence-option">
-      <Icon name="pin" size={19} />
-      <span>Camera</span>
-      <input
-        className="evidence-input"
-        type="file"
-        accept="image/*"
-        capture="environment"
-        aria-label="Take a photo using the camera"
-        onChange={(event) => {
-          addReportFiles(event.target.files)
-          event.target.value = ''
-        }}
-      />
-    </label>
-
-    <label className="evidence-option">
-      <Icon name="plus" size={19} />
-      <span>Photos</span>
-      <input
-        className="evidence-input"
-        type="file"
-        accept="image/*"
-        multiple
-        aria-label="Choose photos"
-        onChange={(event) => {
-          addReportFiles(event.target.files)
-          event.target.value = ''
-        }}
-      />
-    </label>
-
-    <label className="evidence-option">
-      <Icon name="plus" size={19} />
-      <span>Videos</span>
-      <input
-        className="evidence-input"
-        type="file"
-        accept="video/*"
-        multiple
-        aria-label="Choose videos"
-        onChange={(event) => {
-          addReportFiles(event.target.files)
-          event.target.value = ''
-        }}
-      />
-    </label>
-
-    <label className="evidence-option">
-      <Icon name="plus" size={19} />
-      <span>Files</span>
-      <input
-        className="evidence-input"
-        type="file"
-        accept=".pdf,.doc,.docx,.txt,.csv,.xlsx"
-        multiple
-        aria-label="Choose documents"
-        onChange={(event) => {
-          addReportFiles(event.target.files)
-          event.target.value = ''
-        }}
-      />
-    </label>
-  </div>
-
-  <p className="evidence-help">
-    Up to 5 files, 10 MB each. Please avoid sharing private or sensitive
-    information.
-  </p>
-
-  {fileError && (
-    <p className="form-error" role="alert">
-      {fileError}
-    </p>
-  )}
-
-  {reportFiles.length > 0 && (
-    <ul className="evidence-list">
-      {reportFiles.map((file, index) => (
-        <li
-          className="evidence-file"
-          key={`${file.name}-${file.size}-${index}`}
-        >
-          <div className="evidence-file-info">
-            <strong>{file.name}</strong>
-            <span>{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
-          </div>
-          <button
-            type="button"
-            className="evidence-remove"
-            aria-label={`Remove ${file.name}`}
-            onClick={() => removeReportFile(index)}
-          >
-            Remove
-          </button>
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
-
-              {formError && <p className="form-error" role="alert">{formError}</p>}
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="button button-outline"
-                  onClick={() => {
-                    setShowReportForm(false)
-                    setFormError('')
-                  }}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="button button-primary">
-                  Create demo report <Icon name="arrow" size={16} />
-                </button>
-              </div>
-            </form>
-          </section>
+          {view === 'map' && <section className="dashboard-page"><div className="page-heading"><p className="eyebrow">CITY VIEW</p><h1>Map & <span>hotspots</span></h1><p className="muted">Explore where reported issues are occurring. Map pins and geographic aggregation require real coordinates and map integration.</p></div><div className="map-layout"><div className="map-preview panel-card"><div className="map-grid-art"><div className="map-road road-a" /><div className="map-road road-b" /><div className="map-road road-c" /><div className="map-park">GREEN SPACE</div>{issues.filter((issue) => issue.coordinates).map((issue, index) => <span key={issue.id} className={`map-dot dot-${index % 3}`} title={issue.title} />)}<div className="map-placeholder-note"><Icon name="map" size={25} /><strong>Map integration placeholder</strong><span>Connect Leaflet / OpenStreetMap to display actual issue coordinates.</span></div></div></div><div className="panel-card hotspot-list"><h2>Reported nearby</h2>{issues.map((issue) => <button className="hotspot-row" key={issue.id} onClick={() => { setSelectedIssueId(issue.id); setView('issue') }}><span className="hotspot-pin"><Icon name="pin" size={17} /></span><span><strong>{issue.title}</strong><small>{issue.locality}</small></span><span className="hotspot-votes">{issue.votes} ↑</span></button>)}</div></div></section>}
         </div>
-      )}
+        <footer className="footer"><span>© 2026 CivicLens AI</span><span>Built for clearer civic communication</span><span className="footer-status"><span /> Frontend demo</span></footer>
+      </main>
     </div>
   )
+}
+
+function IssueCard({ issue, voted, onVote, onOpen }: { issue: Issue; voted: boolean; onVote: () => void; onOpen: () => void }) {
+  return <article className="issue-card"><div className="vote-rail"><button className={`vote-button ${voted ? 'voted' : ''}`} onClick={onVote} aria-label={voted ? 'Remove upvote' : 'Upvote issue'}><Icon name="thumb" size={18} /></button><strong>{issue.votes}</strong><small>votes</small></div><div className="issue-card-body"><div className="issue-card-top"><span className="category-pill">{issue.category}</span><StatusBadge status={issue.status} /></div><button className="issue-title-button" onClick={onOpen}>{issue.title}</button><p>{issue.description}</p><div className="issue-card-meta"><span><Icon name="pin" size={14} />{issue.locality}</span><span>{issue.createdAt}</span><span><Icon name="message" size={14} /> Community discussion</span></div><div className="issue-card-bottom"><button onClick={onOpen} className="text-action">View details <span>→</span></button><span className="issue-small-id">{issue.id}</span></div></div></article>
+}
+
+function StatusBadge({ status }: { status: Issue['status'] }) {
+  return <span className={`status-badge status-${status.toLowerCase().replace(' ', '-')}`}>{status}</span>
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 export default App

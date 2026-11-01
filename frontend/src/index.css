@@ -1,259 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 :root {
-  font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --green: #08784f;
+  --green-dark: #064b35;
+  --green-deep: #011712;
+  --mint: #b8ead4;
+  --mint-soft: #e8f7ef;
+  --green-border: #b6dfc9;
+  --green-shadow: rgba(8, 120, 79, .14);
+  --page: #f5faf6;
+  --surface: #ffffff;
+  --surface-2: #f7fcf8;
+  --soft: #f0f7f2;
+  --input-bg: #ffffff;
+  --text: #345448;
+  --text-strong: #123e2f;
+  --text-muted: #71877c;
+  --placeholder: #9aada2;
+  --border: #dcebe1;
+  --shadow-color: rgba(3, 47, 35, .10);
+  --danger: #a54848;
+  --status-reported: #8a6a17;
+  --status-reported-bg: #fbf4d9;
+  --status-progress: #176f5b;
+  --status-progress-bg: #dff4e9;
+  --status-resolved: #08784f;
+  --status-resolved-bg: #d8f1e1;
+  --map-bg: #edf7ef;
+  --map-line: #c5dfcd;
+  --map-grid: rgba(7, 99, 66, .08);
+  --park-bg: #d0ebd5;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  /* Your reference palette: light mode */
-  --green-forest: #008B40;
-  --green-emerald: #08B76B;
-  --green-jade: #36CDA8;
-  --green-mint: #43EDB5;
-  --green-aqua: #79F3E9;
-
-  --green: #008B40;
-  --green-bright: #08B76B;
-  --green-soft: #E0F9ED;
-  --green-soft-hover: #CDF4E0;
-
-  --category-forest: #008B40;
-  --category-mint: #12A96F;
-  --category-jade: #159A83;
-  --category-aqua: #008D81;
-
-  --bg: #F0FFF9;
-  --surface: #F9FFFC;
-  --surface-hover: #EAFBF3;
-  --section-bg: #EAFBF3;
-  --header-bg: rgba(249, 255, 252, 0.92);
-  --footer-bg: #E7F9F0;
-  --input-bg: #F9FFFC;
-
-  --text: #365C4A;
-  --text-strong: #123C2C;
-  --text-muted: #567566;
-  --text-faint: #789687;
-
-  --border: #D6EEE2;
-  --border-strong: #B4E2CB;
-  --focus-ring: rgba(8, 183, 107, 0.19);
-
-  --brand-mark-bg: #008B40;
-  --brand-mark-text: #F0FFF9;
-  --button-bg: #008B40;
-  --button-hover: #006F34;
-  --button-text: #FFFFFF;
-  --button-shadow: rgba(0, 107, 56, 0.16);
-
-  --shadow: 0 8px 26px rgba(0, 72, 43, 0.06);
-  --card-shadow: 0 9px 26px rgba(0, 72, 43, 0.07);
-  --modal-shadow: 0 24px 90px rgba(0, 45, 27, 0.22);
-  --overlay: rgba(0, 35, 22, 0.48);
-
-  /* Green-family severity indicators */
-  --severity-low: #16844F;
-  --severity-low-bg: #E4F8EB;
-  --severity-medium: #827B19;
-  --severity-medium-bg: #F5F4D9;
-  --severity-high: #B05A23;
-  --severity-high-bg: #FBEBDD;
-  --severity-critical: #B52F42;
-  --severity-critical-bg: #FBE8EB;
-
-  /* Workflow statuses */
-  --status-reported: #087C54;
-  --status-reported-bg: #E2F8ED;
-  --status-review: #167F79;
-  --status-review-bg: #DDF7F1;
-  --status-progress: #08764B;
-  --status-progress-bg: #D9F5E5;
-  --status-resolved: #167847;
-  --status-resolved-bg: #DDF6E6;
-
-  /* Decorative illustration */
-  --art-sky: #DFFAF1;
-  --art-border: #C9EEE0;
-  --art-sun: #79F3E9;
-  --art-sun-border: rgba(0, 139, 64, 0.12);
-  --art-sun-halo: rgba(67, 237, 181, 0.18);
-  --art-cloud: rgba(255, 255, 255, 0.83);
-  --art-hill: #B9F1D7;
-  --art-hill-back: #8AE4C1;
-  --art-building: #42B982;
-  --art-building-border: rgba(0, 107, 56, 0.15);
-  --art-window: #DFFAF1;
-  --art-window-border: rgba(0, 107, 56, 0.15);
-  --art-tree: #008B40;
-  --art-tree-highlight: #36CDA8;
-  --art-trunk: #287E55;
-  --art-road: #A1D9C0;
-  --art-road-border: rgba(0, 107, 56, 0.1);
-  --art-road-line: rgba(249, 255, 252, 0.8);
-
-  color-scheme: light;
-  color: var(--text);
-  background: var(--bg);
 }
-
-/* Dark mode: the same greens, deeper forest shades, and restrained black */
-:root[data-theme="dark"] {
-  --green-forest: #003D25;
-  --green-emerald: #006B43;
-  --green-jade: #008C70;
-  --green-mint: #12AD83;
-  --green-aqua: #3AD6C0;
-
-  --green: #43EDB5;
-  --green-bright: #36CDA8;
-  --green-soft: #123D2E;
-  --green-soft-hover: #194D39;
-
-  --category-forest: #43EDB5;
-  --category-mint: #36CDA8;
-  --category-jade: #12AD83;
-  --category-aqua: #3AD6C0;
-
-  --bg: #07150F;
-  --surface: #0D2117;
-  --surface-hover: #143225;
-  --section-bg: #091B12;
-  --header-bg: rgba(7, 21, 15, 0.94);
-  --footer-bg: #08170F;
-  --input-bg: #0B1B12;
-
-  --text: #B5D6C4;
-  --text-strong: #E5FFF0;
-  --text-muted: #A1C5B1;
-  --text-faint: #83A895;
-
-  --border: #203E2E;
-  --border-strong: #32694C;
-  --focus-ring: rgba(67, 237, 181, 0.18);
-
-  --brand-mark-bg: #006B43;
-  --brand-mark-text: #E5FFF0;
-  --button-bg: #12AD83;
-  --button-hover: #36CDA8;
-  --button-text: #031A11;
-  --button-shadow: rgba(0, 0, 0, 0.22);
-
-  --shadow: 0 8px 26px rgba(0, 0, 0, 0.18);
-  --card-shadow: 0 9px 26px rgba(0, 0, 0, 0.2);
-  --modal-shadow: 0 24px 90px rgba(0, 0, 0, 0.52);
-  --overlay: rgba(0, 0, 0, 0.7);
-
-  --severity-low: #66E3A0;
-  --severity-low-bg: #123C28;
-  --severity-medium: #D9DB78;
-  --severity-medium-bg: #39391C;
-  --severity-high: #F0AE76;
-  --severity-high-bg: #41291B;
-  --severity-critical: #FF9EAB;
-  --severity-critical-bg: #40202A;
-
-  --status-reported: #75E9B2;
-  --status-reported-bg: #123B29;
-  --status-review: #65DED0;
-  --status-review-bg: #123B36;
-  --status-progress: #6EE8A8;
-  --status-progress-bg: #10412C;
-  --status-resolved: #8AE9A8;
-  --status-resolved-bg: #153D28;
-
-  --art-sky: #0D2B1D;
-  --art-border: #244E39;
-  --art-sun: #36CDA8;
-  --art-sun-border: rgba(121, 243, 233, 0.18);
-  --art-sun-halo: rgba(54, 205, 168, 0.09);
-  --art-cloud: rgba(95, 174, 133, 0.17);
-  --art-hill: #124832;
-  --art-hill-back: #0D5B3D;
-  --art-building: #0D704B;
-  --art-building-border: rgba(121, 243, 233, 0.14);
-  --art-window: #43EDB5;
-  --art-window-border: rgba(121, 243, 233, 0.16);
-  --art-tree: #006B43;
-  --art-tree-highlight: #008C70;
-  --art-trunk: #20543B;
-  --art-road: #143A2A;
-  --art-road-border: rgba(121, 243, 233, 0.12);
-  --art-road-line: rgba(121, 243, 233, 0.2);
-
-  color-scheme: dark;
+:root[data-theme='dark'] {
+  --green: #58c796;
+  --green-dark: #b4efd1;
+  --green-deep: #031b14;
+  --mint: #285b45;
+  --mint-soft: #173b2d;
+  --green-border: #315e49;
+  --green-shadow: rgba(0, 0, 0, .28);
+  --page: #07130e;
+  --surface: #0c1d15;
+  --surface-2: #10251a;
+  --soft: #10271c;
+  --input-bg: #081810;
+  --text: #c1d8ca;
+  --text-strong: #e8f7ee;
+  --text-muted: #8da99a;
+  --placeholder: #6f897a;
+  --border: #244333;
+  --shadow-color: rgba(0, 0, 0, .32);
+  --danger: #ff9b9b;
+  --status-reported: #efd98b;
+  --status-reported-bg: #3b3219;
+  --status-progress: #8de0bd;
+  --status-progress-bg: #153c2d;
+  --status-resolved: #8de0bd;
+  --status-resolved-bg: #153c2d;
+  --map-bg: #0c2117;
+  --map-line: #254b36;
+  --map-grid: rgba(110, 180, 140, .08);
+  --park-bg: #193f2b;
 }
-
-* {
-  box-sizing: border-box;
-}
-
-html {
-  min-width: 320px;
-  min-height: 100%;
-  scroll-behavior: smooth;
-  scroll-padding-top: 90px;
-}
-
-body {
-  min-width: 320px;
-  min-height: 100vh;
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.5;
-  transition: background-color 180ms ease, color 180ms ease;
-}
-
-body,
-button,
-input,
-textarea,
-select {
-  font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-button {
-  -webkit-tap-highlight-color: transparent;
-}
-
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--green-bright);
-  outline-offset: 3px;
-}
-
-a {
-  color: inherit;
-}
-
-svg {
-  display: block;
-  flex-shrink: 0;
-}
-
-::selection {
-  background: var(--green-jade);
-  color: #062819;
-}
-
-#root {
-  min-height: 100vh;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-}
+* { box-sizing: border-box; }
+html { min-width: 320px; min-height: 100%; background: var(--page); color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, input, textarea, select { font-family: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+#root { min-height: 100vh; }
