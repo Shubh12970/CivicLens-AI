@@ -3,6 +3,8 @@ import './App.css'
 
 type Theme = 'light' | 'dark'
 type View = 'community' | 'report' | 'issue' | 'admin' | 'leaderboard' | 'map'
+type AccountRole = 'public' | 'organisation'
+type AuthStage = 'choose' | 'login' | 'app'
 type Attachment = { id: string; file: File }
 type Issue = {
   id: string
@@ -122,6 +124,11 @@ async function reverseGeocode(latitude: number, longitude: number): Promise<stri
 function App() {
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('civiclens-theme') as Theme) || 'light')
   const [view, setView] = useState<View>('community')
+  const [accountRole, setAccountRole] = useState<AccountRole | null>(null)
+  const [authStage, setAuthStage] = useState<AuthStage>('choose')
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginMessage, setLoginMessage] = useState('')
   const [issues, setIssues] = useState<Issue[]>(initialIssues)
   const [selectedIssueId, setSelectedIssueId] = useState('CL-1024')
   const [searchText, setSearchText] = useState('')
@@ -300,7 +307,7 @@ function App() {
     setCommentText('')
   }
 
-  const navItems: { id: View; label: string; icon: string }[] = [
+  const allNavItems: { id: View; label: string; icon: string }[] = [
     { id: 'community', label: 'Community', icon: 'home' },
     { id: 'report', label: 'Report an issue', icon: 'plus' },
     { id: 'issue', label: 'Issue details', icon: 'message' },
@@ -308,6 +315,83 @@ function App() {
     { id: 'leaderboard', label: 'Leaderboard', icon: 'trophy' },
     { id: 'map', label: 'Map & hotspots', icon: 'map' },
   ]
+  const navItems = allNavItems.filter((item) => accountRole === 'organisation'
+    ? ['admin', 'issue', 'map'].includes(item.id)
+    : item.id !== 'admin')
+
+  function handleDemoLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      setLoginMessage('Enter your email and password to continue.')
+      return
+    }
+    setAccountRole(accountRole || 'public')
+    setView(accountRole === 'organisation' ? 'admin' : 'community')
+    setAuthStage('app')
+    setLoginMessage('')
+  }
+
+  function signOut() {
+    setAuthStage('choose')
+    setAccountRole(null)
+    setLoginEmail('')
+    setLoginPassword('')
+    setView('community')
+  }
+
+  if (authStage !== 'app') {
+    return (
+      <div className="auth-shell">
+        <div className="auth-decoration auth-decoration-one">✳</div>
+        <div className="auth-decoration auth-decoration-two">❧</div>
+        <header className="auth-brand">
+          <span className="brand-mark"><Icon name="pin" size={23} /></span>
+          <span><strong>CivicLens</strong><small>AI-powered civic community</small></span>
+        </header>
+        <main className="auth-main">
+          {authStage === 'choose' ? (
+            <>
+              <p className="eyebrow">A BETTER CITY STARTS TOGETHER</p>
+              <h1>Welcome to <span>CivicLens</span></h1>
+              <p className="auth-intro">A shared space for citizens to raise concerns and civic teams to act on them.</p>
+              <h2 className="auth-question">How would you like to continue?</h2>
+              <div className="role-grid">
+                <button className="role-card" onClick={() => { setAccountRole('public'); setAuthStage('login'); setLoginMessage('') }}>
+                  <span className="role-icon"><Icon name="users" size={27} /></span>
+                  <span className="role-title">Public / Citizen</span>
+                  <span className="role-description">Report local issues, support your neighbours, and track updates.</span>
+                  <span className="role-continue">Continue as citizen <span>→</span></span>
+                </button>
+                <button className="role-card" onClick={() => { setAccountRole('organisation'); setAuthStage('login'); setLoginMessage('') }}>
+                  <span className="role-icon"><Icon name="chart" size={27} /></span>
+                  <span className="role-title">Organisation / Government</span>
+                  <span className="role-description">Review complaints, prioritise work, assign teams, and update status.</span>
+                  <span className="role-continue">Continue as organisation <span>→</span></span>
+                </button>
+              </div>
+              <p className="auth-footnote">Tiny reports. Clearer action. Greener communities.</p>
+            </>
+          ) : (
+            <div className="login-card">
+              <button className="back-link" type="button" onClick={() => { setAuthStage('choose'); setLoginMessage('') }}>← Choose account type</button>
+              <div className="login-icon"><Icon name={accountRole === 'organisation' ? 'chart' : 'users'} size={26} /></div>
+              <p className="eyebrow">{accountRole === 'organisation' ? 'CIVIC TEAM ACCESS' : 'COMMUNITY ACCESS'}</p>
+              <h1>{accountRole === 'organisation' ? 'Organisation login' : 'Citizen login'}</h1>
+              <p className="muted">{accountRole === 'organisation' ? 'Access the complaint triage and department workspace.' : 'Sign in to report issues and follow your neighbourhood.'}</p>
+              <form className="login-form" onSubmit={handleDemoLogin}>
+                <label>Email address<input type="email" value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} placeholder="you@example.com" required autoComplete="email" /></label>
+                <label>Password<input type="password" value={loginPassword} onChange={(event) => setLoginPassword(event.target.value)} placeholder="Enter your password" required autoComplete="current-password" /></label>
+                {loginMessage && <p className="form-message" role="alert">{loginMessage}</p>}
+                <button className="primary-button login-submit" type="submit">Continue to {accountRole === 'organisation' ? 'workspace' : 'community'} <span>→</span></button>
+                <p className="login-demo-note">Demo mode: this screen does not authenticate or store accounts. Connect your backend authentication before production.</p>
+              </form>
+            </div>
+          )}
+        </main>
+        <footer className="auth-footer">© 2026 CivicLens · Transparent civic action, together</footer>
+      </div>
+    )
+  }
 
   return (
     <div className="app-shell">
@@ -327,19 +411,19 @@ function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="points-card"><span className="points-icon"><Icon name="trophy" size={20} /></span><div><small>Your contribution</small><strong>120 points</strong></div></div>
-          <div className="profile-row"><div className="avatar">A</div><div><strong>Community member</strong><small>Citizen account</small></div><span className="profile-menu">•••</span></div>
+          {accountRole === 'public' && <div className="points-card"><span className="points-icon"><Icon name="trophy" size={20} /></span><div><small>Your contribution</small><strong>120 points</strong></div></div>}
+          <div className="profile-row"><div className="avatar">A</div><div><strong>{accountRole === 'organisation' ? 'Civic department' : 'Community member'}</strong><small>{accountRole === 'organisation' ? 'Organisation account' : 'Citizen account'}</small></div><button className="profile-menu" onClick={signOut} aria-label="Sign out" title="Sign out">↪</button></div>
         </div>
       </aside>
 
       <main className="main-area">
         <header className="topbar">
           <div className="mobile-brand"><span className="brand-mark">C</span><strong>CivicLens AI</strong></div>
-          <div className="breadcrumb"><span>Workspace</span><span>/</span><strong>{navItems.find((item) => item.id === view)?.label}</strong></div>
+          <div className="breadcrumb"><span>{accountRole === 'organisation' ? 'Organisation workspace' : 'Community workspace'}</span><span>/</span><strong>{navItems.find((item) => item.id === view)?.label}</strong></div>
           <div className="topbar-actions">
             <label className="search-box"><span className="search-symbol">⌕</span><input value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search reports..." aria-label="Search reports" /></label>
             <button className="theme-toggle" type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}><Icon name={theme === 'light' ? 'moon' : 'sun'} size={19} /></button>
-            <button className="primary-button top-report" onClick={() => { setView('report'); setFormMessage('') }}><Icon name="plus" size={17} /> Report issue</button>
+            {accountRole === 'public' && <button className="primary-button top-report" onClick={() => { setView('report'); setFormMessage('') }}><Icon name="plus" size={17} /> Report issue</button>}
           </div>
         </header>
 
